@@ -1,0 +1,111 @@
+[2026-01-08 13:13:24] ACCESS: IP=::1 | USER=admin  | ACTION=LOGIN_FAILED | URI=/projet_tutor%C3%A9_inf/app/login.php
+[2026-01-08 13:14:26] ACCESS: IP=::1 | USER=admin  | ACTION=LOGIN_FAILED | URI=/projet_tutor%C3%A9_inf/app/login.php
+[2026-01-08 13:14:36] ACCESS: IP=::1 | USER=admin | ACTION=LOGIN_SUCCESS | URI=/projet_tutor%C3%A9_inf/app/login.php
+[2026-01-22 20:59:47] ACCESS - IP: ::1 | User:  admin' -- | Action: LOGIN_ATTEMPT | Status: STARTED
+[2026-01-22 21:10:22] ACCESS - IP: ::1 | User: admin | Action: LOGIN_ATTEMPT | Status: STARTED
+[2026-01-22 21:19:54] ACCESS - IP: ::1 | User: admin | Action: LOGIN_ATTEMPT | Status: STARTED
+[2026-01-22 21:19:54] ACCESS - IP: ::1 | User: admin | Action: LOGIN_ATTEMPT | Status: LOW_RISK_DIRECT
+[2026-01-22 21:21:46] ACCESS - IP: ::1 | User: admin | Action: LOGIN_ATTEMPT | Status: STARTED
+[2026-01-22 21:21:46] ACCESS - IP: ::1 | User: admin | Action: LOGIN_ATTEMPT | Status: LOW_RISK_DIRECT
+[2026-01-22 21:22:50] ACCESS - IP: ::1 | User: admin | Action: LOGIN_ATTEMPT | Status: STARTED
+[2026-01-22 21:22:50] ACCESS - IP: ::1 | User: admin | Action: LOGIN_ATTEMPT | Status: LOW_RISK_DIRECT
+[2026-01-22 21:27:54] ACCESS - IP: ::1 | User: admin | Action: LOGIN_ATTEMPT | Status: STARTED
+[2026-01-22 21:27:54] ACCESS - IP: ::1 | User: admin | Action: LOGIN_ATTEMPT | Status: LOW_RISK_DIRECT
+[2026-01-22 21:27:54] ACCESS - IP: ::1 | User: admin | Action: LOGIN | Status: FAILED_INVALID_CREDENTIALS
+[2026-01-22 21:28:03] ACCESS - IP: ::1 | User: admin | Action: LOGIN_ATTEMPT | Status: STARTED
+[2026-01-22 21:28:03] ACCESS - IP: ::1 | User: admin | Action: LOGIN_ATTEMPT | Status: LOW_RISK_DIRECT
+[2026-01-22 21:28:03] ACCESS - IP: ::1 | User: admin | Action: LOGIN | Status: FAILED_INVALID_CREDENTIALS
+[2026-01-22 21:28:28] ACCESS - IP: ::1 | User: admin | Action: LOGIN_ATTEMPT | Status: STARTED
+[2026-01-22 21:28:28] ACCESS - IP: ::1 | User: admin | Action: LOGIN_ATTEMPT | Status: LOW_RISK_DIRECT
+[2026-01-22 21:28:28] ACCESS - IP: ::1 | User: admin | Action: LOGIN | Status: SUCCESS
+[2026-01-24 11:45:57] ACCESS - IP: ::1 | User: ligin' -- | Action: LOGIN_ATTEMPT | Status: STARTED
+[2026-01-24 11:45:57] ACCESS - IP: ::1 | User: ligin' -- | Action: LOGIN_ATTEMPT | Status: NEEDS_IA_ANALYSIS
+[2026-01-24 11:45:57] ACCESS - IP: ::1 | User: ligin' -- | Action: LOGIN_ATTEMPT | Status: IA_CLEARED_CONTINUE
+[2026-01-24 11:45:57] ACCESS - IP: ::1 | User: ligin&#039; -- | Action: LOGIN | Status: FAILED_INVALID_CREDENTIALS
+[2026-01-24 11:46:15] ACCESS - IP: ::1 | User: 'OR 1=1-- | Action: LOGIN_ATTEMPT | Status: STARTED
+[2026-01-24 11:46:15] ACCESS - IP: ::1 | User: 'OR 1=1-- | Action: LOGIN_ATTEMPT | Status: BLOCKED_HIGH_SCORE
+[2026-01-24 11:47:42] ACCESS - IP: ::1 | User: 'OR 1=1-- | Action: LOGIN_ATTEMPT | Status: STARTED
+[2026-01-24 11:47:42] ACCESS - IP: ::1 | User: 'OR 1=1-- | Action: LOGIN_ATTEMPT | Status: BLOCKED_HIGH_SCORE
+[2026-01-24 11:47:50] ACCESS - IP: ::1 | User: ligin' -- | Action: LOGIN_ATTEMPT | Status: STARTED
+[2026-01-24 11:47:50] ACCESS - IP: ::1 | User: ligin' -- | Action: LOGIN_ATTEMPT | Status: NEEDS_IA_ANALYSIS
+[2026-01-24 11:47:50] ACCESS - IP: ::1 | User: ligin' -- | Action: LOGIN_ATTEMPT | Status: IA_CLEARED_CONTINUE
+[2026-01-24 11:47:50] ACCESS - IP: ::1 | User: ligin&#039; -- | Action: LOGIN | Status: FAILED_INVALID_CREDENTIALS
+[2026-01-24 11:49:11] ACCESS - IP: ::1 | User: ligin' -- | Action: LOGIN_ATTEMPT | Status: STARTED
+[2026-01-24 11:49:11] ACCESS - IP: ::1 | User: ligin' -- | Action: LOGIN_ATTEMPT | Status: NEEDS_IA_ANALYSIS
+[2026-01-24 11:49:11] ACCESS - IP: ::1 | User: ligin' -- | Action: LOGIN_ATTEMPT | Status: IA_CLEARED_CONTINUE
+[2026-01-24 11:49:11] ACCESS - IP: ::1 | User: ligin&#039; -- | Action: LOGIN | Status: FAILED_INVALID_CREDENTIALS
+[2026-01-24 11:49:18] ACCESS - IP: ::1 | User: ligin' -- | Action: LOGIN_ATTEMPT | Status: STARTED
+[2026-01-24 11:49:18] ACCESS - IP: ::1 | User: ligin' -- | Action: LOGIN_ATTEMPT | Status: NEEDS_IA_ANALYSIS
+[2026-01-24 11:49:18] ACCESS - IP: ::1 | User: ligin' -- | Action: LOGIN_ATTEMPT | Status: IA_CLEARED_CONTINUE
+[2026-01-24 11:49:18] ACCESS - IP: ::1 | User: ligin&#039; -- | Action: LOGIN | Status: FAILED_INVALID_CREDENTIALS
+[2026-01-24 11:49:40] ACCESS - IP: ::1 | User: 'OR 1=1-- | Action: LOGIN_ATTEMPT | Status: STARTED
+[2026-01-24 11:49:40] ACCESS - IP: ::1 | User: 'OR 1=1-- | Action: LOGIN_ATTEMPT | Status: BLOCKED_HIGH_SCORE
+[2026-01-24 11:51:11] ACCESS - IP: ::1 | User: 'OR 1=1-- | Action: LOGIN_ATTEMPT | Status: STARTED
+[2026-01-24 11:51:11] ACCESS - IP: ::1 | User: 'OR 1=1-- | Action: LOGIN_ATTEMPT | Status: BLOCKED_HIGH_SCORE
+[2026-01-24 11:52:17] ACCESS - IP: ::1 | User: 'OR 1=1-- | Action: LOGIN_ATTEMPT | Status: STARTED
+[2026-01-24 11:52:17] ACCESS - IP: ::1 | User: 'OR 1=1-- | Action: LOGIN_ATTEMPT | Status: BLOCKED_HIGH_SCORE
+[2026-01-24 11:54:07] ACCESS - IP: ::1 | User: 'OR 1=1-- | Action: LOGIN_ATTEMPT | Status: STARTED
+[2026-01-24 11:54:07] ACCESS - IP: ::1 | User: 'OR 1=1-- | Action: LOGIN_ATTEMPT | Status: BLOCKED_HIGH_SCORE
+[2026-01-24 11:56:06] ACCESS - IP: ::1 | User: 'OR 1=1-- | Action: LOGIN_ATTEMPT | Status: STARTED
+[2026-01-24 11:56:06] ACCESS - IP: ::1 | User: 'OR 1=1-- | Action: LOGIN_ATTEMPT | Status: BLOCKED_HIGH_SCORE
+[2026-01-24 11:56:30] ACCESS - IP: ::1 | User: 'OR 1=1-- | Action: LOGIN_ATTEMPT | Status: STARTED
+[2026-01-24 11:56:30] ACCESS - IP: ::1 | User: 'OR 1=1-- | Action: LOGIN_ATTEMPT | Status: BLOCKED_HIGH_SCORE
+[2026-01-24 11:56:51] ACCESS - IP: ::1 | User: 'OR 1=1-- | Action: LOGIN_ATTEMPT | Status: STARTED
+[2026-01-24 11:56:51] ACCESS - IP: ::1 | User: 'OR 1=1-- | Action: LOGIN_ATTEMPT | Status: BLOCKED_HIGH_SCORE
+[2026-01-24 11:57:37] ACCESS - IP: ::1 | User: 'OR 1=1-- | Action: LOGIN_ATTEMPT | Status: STARTED
+[2026-01-24 11:57:37] ACCESS - IP: ::1 | User: 'OR 1=1-- | Action: LOGIN_ATTEMPT | Status: BLOCKED_HIGH_SCORE
+[2026-01-24 11:57:53] ACCESS - IP: ::1 | User: 'OR 1=1-- | Action: LOGIN_ATTEMPT | Status: STARTED
+[2026-01-24 11:57:53] ACCESS - IP: ::1 | User: 'OR 1=1-- | Action: LOGIN_ATTEMPT | Status: BLOCKED_HIGH_SCORE
+[2026-01-24 12:27:51] ACCESS - IP: ::1 | User: 'OR 1=1-- | Action: LOGIN_ATTEMPT | Status: STARTED
+[2026-01-24 12:27:51] ACCESS - IP: ::1 | User: 'OR 1=1-- | Action: LOGIN_ATTEMPT | Status: BLOCKED_HIGH_SCORE
+[2026-01-24 12:27:55] ACCESS - IP: ::1 | User: ligin' -- | Action: LOGIN_ATTEMPT | Status: STARTED
+[2026-01-24 12:27:55] ACCESS - IP: ::1 | User: ligin' -- | Action: LOGIN_ATTEMPT | Status: BLOCKED_HIGH_SCORE
+[2026-01-24 12:28:34] ACCESS - IP: ::1 | User: 'OR 1+1=2-- | Action: LOGIN_ATTEMPT | Status: STARTED
+[2026-01-24 12:28:34] ACCESS - IP: ::1 | User: 'OR 1+1=2-- | Action: LOGIN_ATTEMPT | Status: BLOCKED_HIGH_SCORE
+[2026-01-24 13:02:31] ACCESS - IP: 192.168.150.191 | User: 'OR '1'='1'-- | Action: LOGIN_ATTEMPT | Status: STARTED
+[2026-01-24 13:02:31] ACCESS - IP: 192.168.150.191 | User: 'OR '1'='1'-- | Action: LOGIN_ATTEMPT | Status: BLOCKED_HIGH_SCORE
+[2026-01-28 09:03:09] ACCESS - IP: ::1 | User: admin | Action: LOGIN_ATTEMPT | Status: STARTED
+[2026-01-28 09:03:09] ACCESS - IP: ::1 | User: admin | Action: LOGIN_ATTEMPT | Status: LOW_RISK_DIRECT
+[2026-01-28 09:03:09] ACCESS - IP: ::1 | User: admin | Action: LOGIN | Status: SUCCESS
+[2026-01-28 09:04:04] ACCESS - IP: ::1 | User: ' OR '1'='1 | Action: LOGIN_ATTEMPT | Status: STARTED
+[2026-01-28 09:04:04] ACCESS - IP: ::1 | User: ' OR '1'='1 | Action: LOGIN_ATTEMPT | Status: BLOCKED_HIGH_SCORE
+[2026-01-28 09:04:18] ACCESS - IP: ::1 | User: adiq | Action: LOGIN_ATTEMPT | Status: STARTED
+[2026-01-28 09:04:18] ACCESS - IP: ::1 | User: adiq | Action: LOGIN_ATTEMPT | Status: LOW_RISK_DIRECT
+[2026-01-28 09:04:18] ACCESS - IP: ::1 | User: adiq | Action: LOGIN | Status: FAILED_INVALID_CREDENTIALS
+[2026-01-28 09:06:12] ACCESS - IP: ::1 | User: admin | Action: LOGIN_ATTEMPT | Status: STARTED
+[2026-01-28 09:06:12] ACCESS - IP: ::1 | User: admin | Action: LOGIN_ATTEMPT | Status: LOW_RISK_DIRECT
+[2026-01-28 09:06:12] ACCESS - IP: ::1 | User: admin | Action: LOGIN | Status: SUCCESS
+[2026-01-28 09:06:51] ACCESS - IP: ::1 | User: admin | Action: LOGIN_ATTEMPT | Status: STARTED
+[2026-01-28 09:06:51] ACCESS - IP: ::1 | User: admin | Action: LOGIN_ATTEMPT | Status: LOW_RISK_DIRECT
+[2026-01-28 09:06:51] ACCESS - IP: ::1 | User: admin | Action: LOGIN | Status: SUCCESS
+[2026-01-28 09:07:27] ACCESS - IP: ::1 | User: admin | Action: LOGIN_ATTEMPT | Status: STARTED
+[2026-01-28 09:07:27] ACCESS - IP: ::1 | User: admin | Action: LOGIN_ATTEMPT | Status: LOW_RISK_DIRECT
+[2026-01-28 09:07:27] ACCESS - IP: ::1 | User: admin | Action: LOGIN | Status: FAILED_INVALID_CREDENTIALS
+[2026-01-28 09:07:35] ACCESS - IP: ::1 | User: admin | Action: LOGIN_ATTEMPT | Status: STARTED
+[2026-01-28 09:07:35] ACCESS - IP: ::1 | User: admin | Action: LOGIN_ATTEMPT | Status: LOW_RISK_DIRECT
+[2026-01-28 09:07:35] ACCESS - IP: ::1 | User: admin | Action: LOGIN | Status: SUCCESS
+[2026-01-28 09:08:22] ACCESS - IP: ::1 | User: admin | Action: LOGIN_ATTEMPT | Status: STARTED
+[2026-01-28 09:08:22] ACCESS - IP: ::1 | User: admin | Action: LOGIN_ATTEMPT | Status: LOW_RISK_DIRECT
+[2026-01-28 09:08:22] ACCESS - IP: ::1 | User: admin | Action: LOGIN | Status: SUCCESS
+[2026-01-28 09:09:51] ACCESS - IP: ::1 | User: admin | Action: LOGIN_ATTEMPT | Status: STARTED
+[2026-01-28 09:09:51] ACCESS - IP: ::1 | User: admin | Action: LOGIN_ATTEMPT | Status: LOW_RISK_DIRECT
+[2026-01-28 09:09:51] ACCESS - IP: ::1 | User: admin | Action: LOGIN | Status: SUCCESS
+[2026-01-28 12:37:00] ACCESS - IP: ::1 | User: admin | Action: LOGIN_ATTEMPT | Status: STARTED
+[2026-01-28 12:37:00] ACCESS - IP: ::1 | User: admin | Action: LOGIN_ATTEMPT | Status: LOW_RISK_DIRECT
+[2026-01-28 12:37:00] ACCESS - IP: ::1 | User: admin | Action: LOGIN | Status: SUCCESS
+[2026-01-28 12:39:27] ACCESS - IP: ::1 | User: admin | Action: LOGIN_ATTEMPT | Status: STARTED
+[2026-01-28 12:39:27] ACCESS - IP: ::1 | User: admin | Action: LOGIN_ATTEMPT | Status: LOW_RISK_DIRECT
+[2026-01-28 12:39:27] ACCESS - IP: ::1 | User: admin | Action: LOGIN | Status: SUCCESS
+[2026-01-28 12:40:33] ACCESS - IP: ::1 | User: admin | Action: LOGIN_ATTEMPT | Status: STARTED
+[2026-01-28 12:40:33] ACCESS - IP: ::1 | User: admin | Action: LOGIN_ATTEMPT | Status: LOW_RISK_DIRECT
+[2026-01-28 12:40:33] ACCESS - IP: ::1 | User: admin | Action: LOGIN | Status: SUCCESS
+[2026-01-28 13:28:27] ACCESS - IP: ::1 | User: admin | Action: LOGIN_ATTEMPT | Status: STARTED
+[2026-01-28 13:28:27] ACCESS - IP: ::1 | User: admin | Action: LOGIN_ATTEMPT | Status: LOW_RISK_DIRECT
+[2026-01-28 13:28:27] ACCESS - IP: ::1 | User: admin | Action: LOGIN | Status: SUCCESS
+[2026-01-28 22:07:28] ACCESS - IP: ::1 | User: admin | Action: LOGIN_ATTEMPT | Status: STARTED
+[2026-01-28 22:07:28] ACCESS - IP: ::1 | User: admin | Action: LOGIN_ATTEMPT | Status: LOW_RISK_DIRECT
+[2026-01-28 22:07:28] ACCESS - IP: ::1 | User: admin | Action: LOGIN | Status: SUCCESS
+[2026-02-12 17:52:57] ACCESS - IP: ::1 | User: ' OR '1'='1 | Action: LOGIN_ATTEMPT | Status: STARTED
+[2026-02-12 17:52:57] ACCESS - IP: ::1 | User: ' OR '1'='1 | Action: LOGIN_ATTEMPT | Status: BLOCKED_HIGH_SCORE
+[2026-02-12 17:54:05] ACCESS - IP: ::1 | User: ' OR '1'='1-- | Action: LOGIN_ATTEMPT | Status: STARTED
+[2026-02-12 17:54:05] ACCESS - IP: ::1 | User: ' OR '1'='1-- | Action: LOGIN_ATTEMPT | Status: BLOCKED_HIGH_SCORE

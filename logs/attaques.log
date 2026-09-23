@@ -1,0 +1,110 @@
+[2026-01-08 13:13:24] ACCESS: IP=::1 | USER=admin  | ACTION=LOGIN_FAILED | URI=/projet_tutor%C3%A9_inf/app/login.php
+[2026-01-08 13:14:26] ACCESS: IP=::1 | USER=admin  | ACTION=LOGIN_FAILED | URI=/projet_tutor%C3%A9_inf/app/login.php
+[2026-01-08 13:14:36] ACCESS: IP=::1 | USER=admin | ACTION=LOGIN_SUCCESS | URI=/projet_tutor%C3%A9_inf/app/login.php
+[2026-01-19 13:24:57] ATTACK - IP: ::1 | Type: SQL_INJECTION | Param: test_param | Payload: ' OR '1'='1
+[2026-01-19 13:24:57] ATTACK - IP: ::1 | Type: SQL_INJECTION | Param: test_param | Payload: admin' --
+[2026-01-19 13:24:57] ATTACK - IP: ::1 | Type: SQL_INJECTION | Param: test_param | Payload: ' UNION SELECT * FROM users --
+[2026-01-19 13:24:57] ATTACK - IP: ::1 | Type: SQL_INJECTION | Param: test_param | Payload: '; DROP TABLE users --
+[2026-01-19 13:24:57] ATTACK - IP: ::1 | Type: SQL_INJECTION | Param: test_param | Payload: ' OR SLEEP(5) --
+[2026-01-19 17:31:06] ATTACK - IP: ::1 | Type: SQL_INJECTION | Param: test_param | Payload: ' OR '1'='1
+[2026-01-19 17:31:06] ATTACK - IP: ::1 | Type: SQL_INJECTION | Param: test_param | Payload: admin' --
+[2026-01-19 17:31:06] ATTACK - IP: ::1 | Type: SQL_INJECTION | Param: test_param | Payload: ' UNION SELECT * FROM users --
+[2026-01-19 17:31:06] ATTACK - IP: ::1 | Type: SQL_INJECTION | Param: test_param | Payload: '; DROP TABLE users --
+[2026-01-19 17:31:06] ATTACK - IP: ::1 | Type: SQL_INJECTION | Param: test_param | Payload: ' OR SLEEP(5) --
+[2026-01-19 17:31:22] ATTACK - IP: ::1 | Type: SQL_INJECTION | Param: test_param | Payload: ' OR '1'='1
+[2026-01-19 17:31:22] ATTACK - IP: ::1 | Type: SQL_INJECTION | Param: test_param | Payload: admin' --
+[2026-01-19 17:31:22] ATTACK - IP: ::1 | Type: SQL_INJECTION | Param: test_param | Payload: ' UNION SELECT * FROM users --
+[2026-01-19 17:31:22] ATTACK - IP: ::1 | Type: SQL_INJECTION | Param: test_param | Payload: '; DROP TABLE users --
+[2026-01-19 17:31:22] ATTACK - IP: ::1 | Type: SQL_INJECTION | Param: test_param | Payload: ' OR SLEEP(5) --
+[2026-01-19 17:39:42] ATTACK - IP: ::1 | Type: SQL_INJECTION | Param: username | Payload: ' OR '1'='1
+[2026-01-19 17:42:44] ATTACK - IP: ::1 | Type: SQL_INJECTION | Param: username | Payload: 'Order by--
+[2026-01-19 17:43:11] ATTACK - IP: ::1 | Type: SQL_INJECTION | Param: test_param | Payload: ' OR '1'='1
+[2026-01-19 17:43:11] ATTACK - IP: ::1 | Type: SQL_INJECTION | Param: test_param | Payload: admin' --
+[2026-01-19 17:43:11] ATTACK - IP: ::1 | Type: SQL_INJECTION | Param: test_param | Payload: ' UNION SELECT * FROM users --
+[2026-01-19 17:43:11] ATTACK - IP: ::1 | Type: SQL_INJECTION | Param: test_param | Payload: '; DROP TABLE users --
+[2026-01-19 17:43:11] ATTACK - IP: ::1 | Type: SQL_INJECTION | Param: test_param | Payload: ' OR SLEEP(5) --
+[2026-01-19 17:43:39] ATTACK - IP: ::1 | Type: SQL_INJECTION | Param: test_param | Payload: ' OR '1'='1
+[2026-01-19 17:43:39] ATTACK - IP: ::1 | Type: SQL_INJECTION | Param: test_param | Payload: admin' --
+[2026-01-19 17:43:39] ATTACK - IP: ::1 | Type: SQL_INJECTION | Param: test_param | Payload: ' UNION SELECT * FROM users --
+[2026-01-19 17:43:39] ATTACK - IP: ::1 | Type: SQL_INJECTION | Param: test_param | Payload: '; DROP TABLE users --
+[2026-01-19 17:43:39] ATTACK - IP: ::1 | Type: SQL_INJECTION | Param: test_param | Payload: ' OR SLEEP(5) --
+[2026-01-21 13:51:32] ATTACK - IP: ::1 | Type: SQL_INJECTION | Param: username | Payload: ' OR '1'='1
+[2026-01-21 13:52:05] ATTACK - IP: ::1 | Type: SQL_INJECTION | Param: username | Payload: 'Order by--
+[2026-01-21 13:52:20] ATTACK - IP: ::1 | Type: SQL_INJECTION | Param: username | Payload: 'order by--
+[2026-01-22 12:16:10] ATTACK - IP: ::1 | Type: SQL_INJECTION | Param: username | Payload: 'OR a=a --
+[2026-01-22 12:16:32] ATTACK - IP: ::1 | Type: SQL_INJECTION | Param: test_param | Payload: ' OR '1'='1
+[2026-01-22 12:16:32] ATTACK - IP: ::1 | Type: SQL_INJECTION | Param: test_param | Payload: admin' --
+[2026-01-22 12:16:32] ATTACK - IP: ::1 | Type: SQL_INJECTION | Param: test_param | Payload: ' UNION SELECT * FROM users --
+[2026-01-22 12:16:32] ATTACK - IP: ::1 | Type: SQL_INJECTION | Param: test_param | Payload: '; DROP TABLE users --
+[2026-01-22 12:16:32] ATTACK - IP: ::1 | Type: SQL_INJECTION | Param: test_param | Payload: ' OR SLEEP(5) --
+[2026-01-22 12:26:55] ATTACK - IP: ::1 | Type: SQL_INJECTION | Param: test_param | Payload: ' OR '1'='1
+[2026-01-22 12:26:55] ATTACK - IP: ::1 | Type: SQL_INJECTION | Param: test_param | Payload: admin' --
+[2026-01-22 12:26:55] ATTACK - IP: ::1 | Type: SQL_INJECTION | Param: test_param | Payload: ' UNION SELECT * FROM users --
+[2026-01-22 12:26:55] ATTACK - IP: ::1 | Type: SQL_INJECTION | Param: test_param | Payload: '; DROP TABLE users --
+[2026-01-22 12:26:55] ATTACK - IP: ::1 | Type: SQL_INJECTION | Param: test_param | Payload: ' OR SLEEP(5) --
+[2026-01-22 17:06:39] ATTACK - IP: ::1 | Type: SQL_INJECTION | Param: username | Score: 0 | Patterns: none | Action:  | Payload: 'ORDER BY --
+[2026-01-22 17:07:33] ATTACK - IP: ::1 | Type: SQL_INJECTION | Param: username | Score: 0 | Patterns: none | Action:  | Payload: 'rtifg --
+[2026-01-22 20:11:11] ATTACK - IP: ::1 | Type: SQL_INJECTION | Param: test_param | Score: 0 | Patterns: none | Action:  | Payload: ' OR '1'='1
+[2026-01-22 20:11:11] ATTACK - IP: ::1 | Type: SQL_INJECTION | Param: test_param | Score: 0 | Patterns: none | Action:  | Payload: admin' --
+[2026-01-22 20:11:11] ATTACK - IP: ::1 | Type: SQL_INJECTION | Param: test_param | Score: 0 | Patterns: none | Action:  | Payload: ' UNION SELECT * FROM users --
+[2026-01-22 20:11:11] ATTACK - IP: ::1 | Type: SQL_INJECTION | Param: test_param | Score: 0 | Patterns: none | Action:  | Payload: '; DROP TABLE users --
+[2026-01-22 20:11:11] ATTACK - IP: ::1 | Type: SQL_INJECTION | Param: test_param | Score: 0 | Patterns: none | Action:  | Payload: ' OR SLEEP(5) --
+[2026-01-22 20:11:28] ATTACK - IP: ::1 | Type: SQL_INJECTION | Param: test_param | Score: 0 | Patterns: none | Action:  | Payload: ' OR '1'='1
+[2026-01-22 20:11:28] ATTACK - IP: ::1 | Type: SQL_INJECTION | Param: test_param | Score: 0 | Patterns: none | Action:  | Payload: admin' --
+[2026-01-22 20:11:28] ATTACK - IP: ::1 | Type: SQL_INJECTION | Param: test_param | Score: 0 | Patterns: none | Action:  | Payload: ' UNION SELECT * FROM users --
+[2026-01-22 20:11:28] ATTACK - IP: ::1 | Type: SQL_INJECTION | Param: test_param | Score: 0 | Patterns: none | Action:  | Payload: '; DROP TABLE users --
+[2026-01-22 20:11:28] ATTACK - IP: ::1 | Type: SQL_INJECTION | Param: test_param | Score: 0 | Patterns: none | Action:  | Payload: ' OR SLEEP(5) --
+[2026-01-22 20:16:33] ATTACK - IP: ::1 | Type: SQL_INJECTION | Param: username | Score: 0 | Patterns: none | Action:  | Payload: ' OR '1'='1
+[2026-01-22 20:17:26] ATTACK - IP: ::1 | Type: SQL_INJECTION | Param: username | Score: 0 | Patterns: none | Action:  | Payload: ' OR SLEEP(5) --
+[2026-01-22 20:18:09] ATTACK - IP: ::1 | Type: SQL_INJECTION | Param: username | Score: 0 | Patterns: none | Action:  | Payload: test' AND '1'='1--
+[2026-01-22 21:31:10] ATTACK - IP: ::1 | Type: SQL_INJECTION_HIGH_SCORE | Param: test_param | Score: 195 | Patterns: /' OR '1'='1/i, /AND|OR/i | Action: BLOCKED | Payload: ' OR '1'='1
+[2026-01-22 21:31:10] ATTACK - IP: ::1 | Type: SQL_INJECTION_SUSPICIOUS | Param: test_param | Score: 50 | Patterns: /--|#|\/\*/ | Action: PENDING_IA | Payload: admin' --
+[2026-01-22 21:31:10] ATTACK - IP: ::1 | Type: SQL_INJECTION_HIGH_SCORE | Param: test_param | Score: 170 | Patterns: /' UNION.*SELECT/i, /--|#|\/\*/, /SELECT.*FROM/i | Action: BLOCKED | Payload: ' UNION SELECT * FROM users --
+[2026-01-22 21:31:10] ATTACK - IP: ::1 | Type: SQL_INJECTION_HIGH_SCORE | Param: test_param | Score: 210 | Patterns: /'; DROP TABLE/i, /--|#|\/\*/ | Action: BLOCKED | Payload: '; DROP TABLE users --
+[2026-01-22 21:31:10] ATTACK - IP: ::1 | Type: SQL_INJECTION_SUSPICIOUS | Param: test_param | Score: 60 | Patterns: none | Action: PENDING_IA | Payload: <script>alert('xss')</script>
+[2026-01-22 21:31:10] ATTACK - IP: ::1 | Type: SQL_INJECTION_HIGH_SCORE | Param: test_param | Score: 95 | Patterns: /AND|OR/i | Action: BLOCKED | Payload: test' AND '1'='2
+[2026-01-22 21:31:10] ATTACK - IP: ::1 | Type: SQL_INJECTION_HIGH_SCORE | Param: test_param | Score: 245 | Patterns: /SLEEP\(/i, /--|#|\/\*/, /AND|OR/i | Action: BLOCKED | Payload: ' OR SLEEP(5) --
+[2026-01-24 11:45:57] ATTACK - IP: ::1 | Type: SQL_INJECTION_SUSPICIOUS | Param: username | Score: 50 | Patterns: /--|#|\/\*/ | Action: PENDING_IA | Payload: ligin' --
+[2026-01-24 11:46:15] ATTACK - IP: ::1 | Type: SQL_INJECTION_HIGH_SCORE | Param: username | Score: 130 | Patterns: /--|#|\/\*/, /AND|OR/i | Action: BLOCKED | Payload: 'OR 1=1--
+[2026-01-24 11:46:15] ATTACK - IP: ::1 | Type: SQL_INJECTION_HIGH_SCORE | Param: password | Score: 130 | Patterns: /--|#|\/\*/, /AND|OR/i | Action: BLOCKED | Payload: 'OR 1=1--
+[2026-01-24 11:47:42] ATTACK - IP: ::1 | Type: SQL_INJECTION_HIGH_SCORE | Param: username | Score: 130 | Patterns: /--|#|\/\*/, /AND|OR/i | Action: BLOCKED | Payload: 'OR 1=1--
+[2026-01-24 11:47:42] ATTACK - IP: ::1 | Type: SQL_INJECTION_HIGH_SCORE | Param: password | Score: 130 | Patterns: /--|#|\/\*/, /AND|OR/i | Action: BLOCKED | Payload: 'OR 1=1--
+[2026-01-24 11:47:50] ATTACK - IP: ::1 | Type: SQL_INJECTION_SUSPICIOUS | Param: username | Score: 50 | Patterns: /--|#|\/\*/ | Action: PENDING_IA | Payload: ligin' --
+[2026-01-24 11:49:11] ATTACK - IP: ::1 | Type: SQL_INJECTION_SUSPICIOUS | Param: username | Score: 50 | Patterns: /--|#|\/\*/ | Action: PENDING_IA | Payload: ligin' --
+[2026-01-24 11:49:18] ATTACK - IP: ::1 | Type: SQL_INJECTION_SUSPICIOUS | Param: username | Score: 50 | Patterns: /--|#|\/\*/ | Action: PENDING_IA | Payload: ligin' --
+[2026-01-24 11:49:40] ATTACK - IP: ::1 | Type: SQL_INJECTION_HIGH_SCORE | Param: username | Score: 130 | Patterns: /--|#|\/\*/, /AND|OR/i | Action: BLOCKED | Payload: 'OR 1=1--
+[2026-01-24 11:49:40] ATTACK - IP: ::1 | Type: SQL_INJECTION_HIGH_SCORE | Param: password | Score: 130 | Patterns: /--|#|\/\*/, /AND|OR/i | Action: BLOCKED | Payload: 'OR 1=1--
+[2026-01-24 11:51:11] ATTACK - IP: ::1 | Type: SQL_INJECTION_HIGH_SCORE | Param: username | Score: 130 | Patterns: /--|#|\/\*/, /AND|OR/i | Action: BLOCKED | Payload: 'OR 1=1--
+[2026-01-24 11:51:11] ATTACK - IP: ::1 | Type: SQL_INJECTION_HIGH_SCORE | Param: password | Score: 130 | Patterns: /--|#|\/\*/, /AND|OR/i | Action: BLOCKED | Payload: 'OR 1=1--
+[2026-01-24 11:52:17] ATTACK - IP: ::1 | Type: SQL_INJECTION_HIGH_SCORE | Param: username | Score: 130 | Patterns: /--|#|\/\*/, /AND|OR/i | Action: BLOCKED | Payload: 'OR 1=1--
+[2026-01-24 11:52:17] ATTACK - IP: ::1 | Type: SQL_INJECTION_HIGH_SCORE | Param: password | Score: 130 | Patterns: /--|#|\/\*/, /AND|OR/i | Action: BLOCKED | Payload: 'OR 1=1--
+[2026-01-24 11:54:07] ATTACK - IP: ::1 | Type: SQL_INJECTION_HIGH_SCORE | Param: username | Score: 130 | Patterns: /--|#|\/\*/, /AND|OR/i | Action: BLOCKED | Payload: 'OR 1=1--
+[2026-01-24 11:54:07] ATTACK - IP: ::1 | Type: SQL_INJECTION_HIGH_SCORE | Param: password | Score: 130 | Patterns: /--|#|\/\*/, /AND|OR/i | Action: BLOCKED | Payload: 'OR 1=1--
+[2026-01-24 11:56:06] ATTACK - IP: ::1 | Type: SQL_INJECTION_HIGH_SCORE | Param: username | Score: 130 | Patterns: /--|#|\/\*/, /AND|OR/i | Action: BLOCKED | Payload: 'OR 1=1--
+[2026-01-24 11:56:06] ATTACK - IP: ::1 | Type: SQL_INJECTION_HIGH_SCORE | Param: password | Score: 130 | Patterns: /--|#|\/\*/, /AND|OR/i | Action: BLOCKED | Payload: 'OR 1=1--
+[2026-01-24 11:56:30] ATTACK - IP: ::1 | Type: SQL_INJECTION_HIGH_SCORE | Param: username | Score: 130 | Patterns: /--|#|\/\*/, /AND|OR/i | Action: BLOCKED | Payload: 'OR 1=1--
+[2026-01-24 11:56:30] ATTACK - IP: ::1 | Type: SQL_INJECTION_HIGH_SCORE | Param: password | Score: 130 | Patterns: /--|#|\/\*/, /AND|OR/i | Action: BLOCKED | Payload: 'OR 1=1--
+[2026-01-24 11:56:51] ATTACK - IP: ::1 | Type: SQL_INJECTION_HIGH_SCORE | Param: username | Score: 130 | Patterns: /--|#|\/\*/, /AND|OR/i | Action: BLOCKED | Payload: 'OR 1=1--
+[2026-01-24 11:56:51] ATTACK - IP: ::1 | Type: SQL_INJECTION_HIGH_SCORE | Param: password | Score: 130 | Patterns: /--|#|\/\*/, /AND|OR/i | Action: BLOCKED | Payload: 'OR 1=1--
+[2026-01-24 11:57:37] ATTACK - IP: ::1 | Type: SQL_INJECTION_HIGH_SCORE | Param: username | Score: 130 | Patterns: /--|#|\/\*/, /AND|OR/i | Action: BLOCKED | Payload: 'OR 1=1--
+[2026-01-24 11:57:37] ATTACK - IP: ::1 | Type: SQL_INJECTION_HIGH_SCORE | Param: password | Score: 130 | Patterns: /--|#|\/\*/, /AND|OR/i | Action: BLOCKED | Payload: 'OR 1=1--
+[2026-01-24 11:57:53] ATTACK - IP: ::1 | Type: SQL_INJECTION_HIGH_SCORE | Param: username | Score: 130 | Patterns: /--|#|\/\*/, /AND|OR/i | Action: BLOCKED | Payload: 'OR 1=1--
+[2026-01-24 11:57:53] ATTACK - IP: ::1 | Type: SQL_INJECTION_HIGH_SCORE | Param: password | Score: 130 | Patterns: /--|#|\/\*/, /AND|OR/i | Action: BLOCKED | Payload: 'OR 1=1--
+[2026-01-24 12:27:51] ATTACK - IP: ::1 | Type: SQL_INJECTION_HIGH_SCORE | Param: username | Score: 160 | Patterns: /--|#|\/\*/, /AND|OR/i, /--[\s\S]*$/i | Action: BLOCKED | Payload: 'OR 1=1--
+[2026-01-24 12:27:51] ATTACK - IP: ::1 | Type: SQL_INJECTION_HIGH_SCORE | Param: password | Score: 160 | Patterns: /--|#|\/\*/, /AND|OR/i, /--[\s\S]*$/i | Action: BLOCKED | Payload: 'OR 1=1--
+[2026-01-24 12:27:51] ATTACK - IP: ::1 | Type: SQL_INJECTION_HIGH_SCORE | Param: username | Score: 160 | Patterns: /--|#|\/\*/, /AND|OR/i, /--[\s\S]*$/i | Action: BLOCKED | Payload: 'OR 1=1--
+[2026-01-24 12:27:55] ATTACK - IP: ::1 | Type: SQL_INJECTION_HIGH_SCORE | Param: username | Score: 80 | Patterns: /--|#|\/\*/, /--[\s\S]*$/i | Action: BLOCKED | Payload: ligin' --
+[2026-01-24 12:27:55] ATTACK - IP: ::1 | Type: SQL_INJECTION_HIGH_SCORE | Param: username | Score: 80 | Patterns: /--|#|\/\*/, /--[\s\S]*$/i | Action: BLOCKED | Payload: ligin' --
+[2026-01-24 12:28:34] ATTACK - IP: ::1 | Type: SQL_INJECTION_HIGH_SCORE | Param: username | Score: 160 | Patterns: /--|#|\/\*/, /AND|OR/i, /--[\s\S]*$/i | Action: BLOCKED | Payload: 'OR 1 1=2--
+[2026-01-24 12:28:34] ATTACK - IP: ::1 | Type: SQL_INJECTION_HIGH_SCORE | Param: username | Score: 160 | Patterns: /--|#|\/\*/, /AND|OR/i, /--[\s\S]*$/i | Action: BLOCKED | Payload: 'OR 1+1=2--
+[2026-01-24 13:02:31] ATTACK - IP: 192.168.150.191 | Type: SQL_INJECTION_HIGH_SCORE | Param: username | Score: 220 | Patterns: /--|#|\/\*/, /AND|OR/i, /--[\s\S]*$/i | Action: BLOCKED | Payload: 'OR '1'='1'--
+[2026-01-24 13:02:31] ATTACK - IP: 192.168.150.191 | Type: SQL_INJECTION_HIGH_SCORE | Param: username | Score: 220 | Patterns: /--|#|\/\*/, /AND|OR/i, /--[\s\S]*$/i | Action: BLOCKED | Payload: 'OR '1'='1'--
+[2026-01-28 09:04:04] ATTACK - IP: ::1 | Type: SQL_INJECTION_HIGH_SCORE | Param: username | Score: 195 | Patterns: /' OR '1'='1/i, /AND|OR/i | Action: BLOCKED | Payload: ' OR '1'='1
+[2026-01-28 09:04:04] ATTACK - IP: ::1 | Type: SQL_INJECTION_HIGH_SCORE | Param: password | Score: 195 | Patterns: /' OR '1'='1/i, /AND|OR/i | Action: BLOCKED | Payload: ' OR '1'='1
+[2026-01-28 09:04:04] ATTACK - IP: ::1 | Type: SQL_INJECTION_HIGH_SCORE | Param: username | Score: 195 | Patterns: /' OR '1'='1/i, /AND|OR/i, /' OR '1'='1/i | Action: BLOCKED | Payload: ' OR '1'='1
+[2026-02-12 17:52:57] ATTACK - IP: ::1 | Type: SQL_INJECTION_HIGH_SCORE | Param: username | Score: 195 | Patterns: /' OR '1'='1/i, /AND|OR/i | Action: BLOCKED | Payload: ' OR '1'='1
+[2026-02-12 17:52:57] ATTACK - IP: ::1 | Type: SQL_INJECTION_HIGH_SCORE | Param: password | Score: 195 | Patterns: /' OR '1'='1/i, /AND|OR/i | Action: BLOCKED | Payload: ' OR '1'='1
+[2026-02-12 17:52:57] ATTACK - IP: ::1 | Type: SQL_INJECTION_HIGH_SCORE | Param: username | Score: 195 | Patterns: /' OR '1'='1/i, /AND|OR/i, /' OR '1'='1/i | Action: BLOCKED | Payload: ' OR '1'='1
+[2026-02-12 17:54:05] ATTACK - IP: ::1 | Type: SQL_INJECTION_HIGH_SCORE | Param: username | Score: 405 | Patterns: /' OR '1'='1/i, /--|#|\/\*/, /AND|OR/i | Action: BLOCKED | Payload: ' OR '1'='1--
+[2026-02-12 17:54:05] ATTACK - IP: ::1 | Type: SQL_INJECTION_HIGH_SCORE | Param: password | Score: 195 | Patterns: /' OR '1'='1/i, /AND|OR/i | Action: BLOCKED | Payload: ' OR '1'='1
+[2026-02-12 17:54:05] ATTACK - IP: ::1 | Type: SQL_INJECTION_HIGH_SCORE | Param: username | Score: 405 | Patterns: /' OR '1'='1/i, /--|#|\/\*/, /AND|OR/i | Action: BLOCKED | Payload: ' OR '1'='1--

@@ -1,0 +1,6 @@
+=== LOG FILE CREATED: 2026-01-22 21:19:54 ===
+
+[2026-01-24 11:45:57] IA_ANALYSIS - IP: ::1 | Context: login | Risk: 0.54 | Confidence: 0.55 | Type: COMMENT_INJECTION | Decision: ALLOW | Query: User: ligin' --, Pass: 1234
+[2026-01-24 11:47:50] IA_ANALYSIS - IP: ::1 | Context: login | Risk: 0.54 | Confidence: 0.55 | Type: COMMENT_INJECTION | Decision: ALLOW | Query: User: ligin' --, Pass: 1234
+[2026-01-24 11:49:11] IA_ANALYSIS - IP: ::1 | Context: login | Risk: 0.54 | Confidence: 0.55 | Type: COMMENT_INJECTION | Decision: ALLOW | Query: User: ligin' --, Pass: 1234
+[2026-01-24 11:49:18] IA_ANALYSIS - IP: ::1 | Context: login | Risk: 0.36 | Confidence: 0.55 | Type: COMMENT_INJECTION | Decision: ALLOW | Query: User: ligin' --, Pass: 4555555555555
