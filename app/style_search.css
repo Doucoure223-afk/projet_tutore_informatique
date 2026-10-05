@@ -27,7 +27,7 @@ body { background: #f0f0f0; padding: 20px; }
 .product-meta { display: flex; justify-content: space-between; font-size: 0.875rem; }
 .product-price { font-weight: 600; color: #2563eb; }
 .product-stock { color: #6b6b6b; }
-.btn-add-cart { display: inline-flex; align-items: center; gap: 8px; margin-top: 12px; padding: 10px 16px; background: #2563eb; color: white; text-decoration: none; border-radius: 8px; font-size: 0.9rem; font-weight: 600; transition: background 0.2s; }
+.btn-add-cart { display: inline-flex; align-items: center; gap: 8px; margin-top: 12px; padding: 10px 16px; background: #2563eb; color: white; text-decoration: none; border-radius: 8px; font-size: 0.9rem; font-weight: 600; transition: background 0.2s; border: 0; cursor: pointer; }
 .btn-add-cart:hover { background: #1d4ed8; }
 .no-results { background: #fef2f2; padding: 30px; border-radius: 12px; text-align: center; }
 .no-results h3 { color: #dc2626; margin-bottom: 8px; }

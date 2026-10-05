@@ -1,0 +1,47 @@
+{
+  "evaluation": "independent_public_test_split",
+  "dataset": {
+    "name": "HttpParamsDataset payload_test.csv",
+    "source_url": "https://github.com/Morzeux/HttpParamsDataset/blob/master/payload_test.csv",
+    "license": "MIT (upstream LICENSE included beside the fixture)",
+    "sha256": "d8015e256ce4499c8ac7a8be8dd25de6487cf018601edf1a03a408a2c8f0e39d",
+    "rows_total": 10355,
+    "source_label_counts": {
+      "cmdi:anom": 30,
+      "norm:norm": 6434,
+      "path-traversal:anom": 97,
+      "sqli:anom": 3617,
+      "xss:anom": 177
+    },
+    "excluded_non_sqli_attacks": {
+      "cmdi": 30,
+      "path-traversal": 97,
+      "xss": 177
+    },
+    "excluded_overlength_payloads": 0
+  },
+  "model": {
+    "version": "cybershield-mlp-demo-v1",
+    "sha256": "d7df929ffebf7791ab257f9048ae4962c2c91e57bb7e6c1a7ffd42a6ae9aa707",
+    "training_dataset": "synthetic_demo",
+    "threshold": 0.75,
+    "feature_schema": "sqli-features-v1",
+    "feature_count": 37
+  },
+  "protocol": "Unchanged model; no retraining or threshold tuning on this test split. SQLi is positive and norm is negative. Other attack families are outside this SQLi-only MVP and excluded.",
+  "evaluated_rows": 10051,
+  "metrics": {
+    "accuracy": 0.976221,
+    "precision": 0.999704,
+    "recall": 0.9342,
+    "specificity": 0.999845,
+    "f1": 0.965843,
+    "balanced_accuracy": 0.967022,
+    "confusion_matrix": {
+      "true_negative": 6433,
+      "false_positive": 1,
+      "false_negative": 238,
+      "true_positive": 3379
+    }
+  }
+}

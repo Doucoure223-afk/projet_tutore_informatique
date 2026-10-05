@@ -1,0 +1,12 @@
+Options -Indexes
+<IfModule mod_rewrite.c>
+RewriteEngine On
+RewriteRule (^|/)(\.|config/|database/|BD/|logs/|ia/|tests/|tmp/) - [F,L]
+</IfModule>
+<FilesMatch "(?i)\.(sql|log|jsonl|joblib|py|ps1|md|txt)$">
+Require all denied
+</FilesMatch>
+<FilesMatch "(?i)^test_.*\.php$">
+Require all denied
+</FilesMatch>
+DirectoryIndex index.php

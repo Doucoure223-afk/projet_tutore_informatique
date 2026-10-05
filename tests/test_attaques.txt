@@ -1,0 +1,8 @@
+SCENARIOS CYBERSHIELD AI
+=======================
+
+Utiliser security/lab.php. Les saisies sont analysées uniquement; elles ne sont
+jamais exécutées en SQL. Les résultats attendus se trouvent dans test_attaques.md.
+
+Le modèle de démonstration ne revendique pas le score ni le jeu de données des
+documents de candidature. Les requêtes préparées restent la défense applicative.

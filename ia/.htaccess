@@ -1,0 +1,2 @@
+# Python sources, training data and model files must never be served by Apache.
+Require all denied

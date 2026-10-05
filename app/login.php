@@ -1,43 +1,43 @@
 <?php
-/**
- * LOGIN VULNÉRABLE - Démonstration SQL Injection
- * Contexte : connexion pour accéder au paiement (e-commerce)
- */
-require_once 'config.php';
-
-$conn = getDatabaseConnection();
+require_once __DIR__ . '/config.php';
 $error = '';
-$success = '';
-
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $username = $_POST['username'] ?? '';
-    $password = $_POST['password'] ?? '';
-
-    // VULNÉRABILITÉ : concaténation directe, aucune protection
-    $sql = "SELECT id, username, email, role FROM users WHERE username = '$username' AND password = '$password'";
-    try {
-        $result = mysqli_query($conn, $sql);
-    } catch (mysqli_sql_exception $e) {
-        $result = false;
+$success = isset($_GET['registered']) ? 'Compte créé. Vous pouvez vous connecter.' : '';
+$redirect = input_text($_POST, 'redirect', input_text($_GET, 'redirect'));
+$target = $redirect === 'paiement' ? 'paiement.php' : 'dashboard.php';
+if (($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'POST' && current_user()) {
+    header('Location: ' . $target);
+    exit;
+}
+if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
+    validate_csrf_token();
+    $username = trim(input_text($_POST, 'username'));
+    $password = input_text($_POST, 'password');
+    $result = execute_query_secure('SELECT id, username, email, role, password FROM users WHERE username = ? AND active = 1 LIMIT 1', [$username]);
+    $user = $result ? $result->fetch_assoc() : null;
+    $valid = false;
+    if ($user && $password !== '') {
+        $stored = (string) $user['password'];
+        $isHash = password_get_info($stored)['algo'] !== null;
+        $valid = $isHash ? password_verify($password, $stored) : hash_equals($stored, $password);
     }
-
-    // Accepter dès qu'au moins 1 ligne (SQLi OR 1=1, UNION, etc.)
-    if ($result && mysqli_num_rows($result) >= 1) {
-        $user = mysqli_fetch_assoc($result);
+    if ($valid) {
+        if (!$isHash && password_get_info($stored)['algo'] === null) {
+            $replacement = password_hash($password, PASSWORD_DEFAULT);
+            execute_query_secure('UPDATE users SET password = ? WHERE id = ?', [$replacement, (int) $user['id']]);
+        }
+        session_regenerate_id(true);
         $_SESSION['user_id'] = (int) $user['id'];
         $_SESSION['username'] = $user['username'];
-        $_SESSION['email'] = $user['email'] ?? '';
-        $_SESSION['role'] = $user['role'] ?? 'user';
+        $_SESSION['email'] = $user['email'];
+        $_SESSION['role'] = $user['role'];
         $_SESSION['login_time'] = time();
         $_SESSION['logged_in'] = true;
         $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
-        $redirect = $_POST['redirect'] ?? $_GET['redirect'] ?? '';
-        $target = ($redirect === 'paiement') ? 'paiement.php' : 'dashboard.php';
+        log_user_action((int) $user['id'], 'Connexion réussie');
         header('Location: ' . $target);
         exit;
     }
-
-    $error = "Identifiants incorrects ou compte inactif.";
+    $error = 'Identifiants incorrects ou compte inactif.';
 }
 ?>
 <!DOCTYPE html>
@@ -45,10 +45,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Connexion - Application Vulnérable</title>
+    <title>Connexion — CyberShield AI</title>
     <script>(function(){var t=localStorage.getItem('theme');if(t==='light'||t==='dark')document.documentElement.setAttribute('data-theme',t);})();</script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="style_login.css">
+    <link rel="stylesheet" href="theme.css">
 </head>
 <body>
     <div class="container">
@@ -62,7 +63,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 </svg>
             </div>
             <h1>Connexion</h1>
-            <p class="subtitle">Connectez-vous pour accéder au paiement (utilisez les payloads dans les champs ci-dessous)</p>
+            <p class="subtitle">Connectez-vous pour retrouver votre espace et tester un achat simulé.</p>
            
         </div>
         
@@ -77,12 +78,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <?php endif; ?>
             
             <form method="POST" action="">
-                <input type="hidden" name="redirect" value="<?php echo htmlspecialchars($_GET['redirect'] ?? ''); ?>">
+                <input type="hidden" name="csrf_token" value="<?php echo escape_output($_SESSION['csrf_token']); ?>">
+                <input type="hidden" name="redirect" value="<?php echo escape_output($redirect); ?>">
                 <div class="form-group">
                     <label for="username">Nom d'utilisateur</label>
                     <input type="text" id="username" name="username" 
                            placeholder="Entrez votre nom d'utilisateur"
-                           value="<?php echo isset($_POST['username']) ? htmlspecialchars($_POST['username']) : ''; ?>"
+                           value="<?php echo escape_output(input_text($_POST, 'username')); ?>"
                            required>
                 </div>
                 <div class="form-group">

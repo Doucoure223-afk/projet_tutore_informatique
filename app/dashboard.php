@@ -1,39 +1,26 @@
 <?php
-require_once 'config.php';
-
-if (!isset($_SESSION['logged_in']) || !$_SESSION['logged_in']) {
-    if (session_status() === PHP_SESSION_NONE) session_start();
+require_once __DIR__ . '/config.php';
+$user = current_user();
+if (!$user) {
     header('Location: login.php');
     exit;
 }
-
-$user_id = $_SESSION['user_id'];
-$sql = "SELECT * FROM users WHERE id = $user_id";
-$user_result = execute_query_vulnerable($sql);
-$user = $user_result ? mysqli_fetch_assoc($user_result) : [];
-$user = $user ?: ['id' => 0, 'username' => 'Inconnu', 'email' => '-', 'role' => 'user', 'created_at' => '-'];
-
+$user_id = (int) $user['id'];
+$is_admin = strtolower((string) $user['role']) === 'admin';
 $logs = [];
-$sql_logs = "SELECT * FROM user_logs WHERE user_id = $user_id ORDER BY timestamp DESC LIMIT 10";
-$logs_result = execute_query_vulnerable($sql_logs);
-if ($logs_result) {
-    while ($log = mysqli_fetch_assoc($logs_result)) {
-        $logs[] = $log;
-    }
-}
-
+$logs_result = execute_query_secure('SELECT action, timestamp, ip_address FROM user_logs WHERE user_id = ? ORDER BY timestamp DESC LIMIT 10', [$user_id]);
+if ($logs_result) { $logs = $logs_result->fetch_all(MYSQLI_ASSOC); }
 $admin_users = [];
-if (isset($_GET['admin_search']) && !empty($_GET['admin_search'])) {
-    $admin_query = $_GET['admin_search'];
-    $sql_admin = "SELECT * FROM users WHERE username LIKE '%$admin_query%' OR email LIKE '%$admin_query%'";
-    $admin_result = execute_query_vulnerable($sql_admin);
-    if ($admin_result) {
-        while ($admin_user = mysqli_fetch_assoc($admin_result)) {
-            $admin_users[] = $admin_user;
-        }
+$admin_query = trim(input_text($_GET, 'admin_search'));
+if ($admin_query !== '') {
+    if (!$is_admin) {
+        http_response_code(403);
+        exit('Cette recherche est réservée aux administrateurs.');
     }
+    $term = '%' . $admin_query . '%';
+    $admin_result = execute_query_secure('SELECT id, username, email, role FROM users WHERE username LIKE ? OR email LIKE ? LIMIT 100', [$term, $term]);
+    if ($admin_result) { $admin_users = $admin_result->fetch_all(MYSQLI_ASSOC); }
 }
-$is_admin = isset($user['role']) && strtolower($user['role']) === 'admin';
 ?>
 <!DOCTYPE html>
 <html lang="fr" data-theme="dark">
@@ -45,6 +32,9 @@ $is_admin = isset($user['role']) && strtolower($user['role']) === 'admin';
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style_dashboard.css">
+    <link rel="stylesheet" href="theme.css">
+    <link rel="stylesheet" href="theme.css">
+    <link rel="stylesheet" href="theme.css">
 </head>
 <body>
     <div class="dashboard">
@@ -63,7 +53,7 @@ $is_admin = isset($user['role']) && strtolower($user['role']) === 'admin';
                 <a href="logout.php" class="nav-item"><i class="fas fa-sign-out-alt"></i> Déconnexion</a>
             </nav>
             <div class="sidebar-user">
-                <div class="user-avatar"><?php echo strtoupper(substr($user['username'] ?? 'U', 0, 1)); ?></div>
+                <div class="user-avatar"><?php echo escape_output(mb_strtoupper(mb_substr($user['username'] ?? 'U', 0, 1))); ?></div>
                 <div class="user-name"><?php echo htmlspecialchars($user['username'] ?? ''); ?></div>
                 <div class="user-role"><?php echo htmlspecialchars($user['role'] ?? 'user'); ?></div>
             </div>
@@ -139,12 +129,12 @@ $is_admin = isset($user['role']) && strtolower($user['role']) === 'admin';
                     <i class="fas fa-users-cog card-icon danger"></i>
                     <div>
                         <h3>Recherche Admin</h3>
-                        <p>Recherche vulnérable SQLi</p>
+                        <p>Accès réservé aux administrateurs</p>
                     </div>
                 </div>
                 <form method="GET" action="" class="admin-search">
                     <input type="text" name="admin_search" placeholder="Rechercher un utilisateur..." 
-                           value="<?php echo isset($_GET['admin_search']) ? htmlspecialchars($_GET['admin_search']) : ''; ?>">
+                           value="<?php echo escape_output($admin_query); ?>">
                     <button type="submit" class="btn-primary"><i class="fas fa-search"></i> Rechercher</button>
                 </form>
                 <?php if (isset($_GET['admin_search'])): ?>
@@ -173,27 +163,11 @@ $is_admin = isset($user['role']) && strtolower($user['role']) === 'admin';
                     <p class="no-results">Aucun utilisateur trouvé</p>
                     <?php endif; ?>
                 <?php endif; ?>
-                <div class="admin-warning">
-                    <i class="fas fa-exclamation-triangle"></i> Vulnérable SQLi — Essayez: <code>test' UNION SELECT 1,2,3,4 --</code>
-                </div>
+                <p class="no-results">La recherche utilise des paramètres SQL liés et limite les résultats à 100 comptes.</p>
             </section>
             <?php endif; ?>
 
-            <details class="debug-section">
-                <summary>Débogage - Requêtes SQL</summary>
-                <div class="debug-content">
-                    <p><strong>Requête utilisateur:</strong> <code>SELECT * FROM users WHERE id = <?php echo (int)$user_id; ?></code></p>
-                    <p><strong>Requête logs:</strong> <code>SELECT * FROM user_logs WHERE user_id = <?php echo (int)$user_id; ?> ORDER BY timestamp DESC LIMIT 10</code></p>
-                    <?php if (isset($_GET['admin_search'])): ?>
-                    <p><strong>Requête admin:</strong> <code>SELECT * FROM users WHERE username LIKE '%<?php echo htmlspecialchars($_GET['admin_search']); ?>%' OR email LIKE '%<?php echo htmlspecialchars($_GET['admin_search']); ?>%'</code></p>
-                    <?php endif; ?>
-                    <ul>
-                        <li>Concaténation directe dans les requêtes SQL</li>
-                        <li>Pas de requêtes préparées</li>
-                        <li>Pas de validation des entrées</li>
-                    </ul>
-                </div>
-            </details>
+            <p class="no-results"><a href="../security/dashboard.php">Ouvrir la supervision CyberShield AI</a></p>
         </main>
     </div>
 

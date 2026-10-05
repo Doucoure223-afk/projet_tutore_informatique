@@ -1,187 +1,115 @@
 <?php
-class SQLInjectionDetector {
-    private $patterns = [
-        // Patterns critiques (score 100)
-        "/' OR '1'='1/i" => 100,
-        "/' OR '1'='1' --/i" => 100,
-        "/' OR 1=1 --/i" => 100,
-        "/' UNION.*SELECT/i" => 100,
-        "/' UNION ALL SELECT/i" => 100,
-        "/'; DROP TABLE/i" => 100,
-        "/'; DELETE FROM/i" => 100,
-        "/SLEEP\(/i" => 100,
-        "/BENCHMARK\(/i" => 100,
-        "/LOAD_FILE\(/i" => 100,
-        
-        // Patterns moyens (score 50)
-        "/--|#|\/\*/" => 50,
-        "/INSERT INTO/i" => 50,
-        "/UPDATE.*SET/i" => 50,
-        
-        // Patterns faibles (score 20)
-        "/SELECT.*FROM/i" => 20,
-        "/WHERE.*=/i" => 20,
-        "/AND|OR/i" => 20,
-        // AJOUTER ces patterns manquants :
-        "/' AND '1'='1/i" => 100,
-        "/' AND '1'='1' --/i" => 100,
-        "/' AND 1=1 --/i" => 100,
-        "/' OR '1'='1--/i" => 100,
-        "/' AND '1'='1--/i" => 100,
-        
-        // Pour détecter les commentaires SQL mieux
-        "/--[\s\S]*$/i" => 30,
-        "/#[\s\S]*$/i" => 30,
-        "/\/\*[\s\S]*\*\//i" => 30,
-        // Patterns ajoutés (lignes 28-38) ✅
-    ];
-    
+/** Local SQLi screening. It never replaces parameterized database queries. */
+class SQLInjectionDetector
+{
     private $blockMode = true;
-    private $logger;
-    
-    public function __construct($logger = null) {
-        $this->logger = $logger;
+    private $blockThreshold = 80;
+    private $reviewThreshold = 30;
+    private $patterns = [
+        'UNION_SELECT' => ['~\bunion\s+(?:(?:all|distinct)\s+)?select\b~i', 95],
+        'NUMERIC_BOOLEAN' => ['~\b(?:or|and)\s+(?:not\s+)?[+-]?\d+(?:\.\d+)?\s*(?:=|!=|<>|>=|<=|>|<)\s*[+-]?\d+(?:\.\d+)?\b~i', 90],
+        'QUOTED_BOOLEAN' => ['~\b(?:or|and)\s+[\x27\x22][^\x27\x22\r\n]{1,80}[\x27\x22]\s*(?:=|!=|<>|like\b)\s*[\x27\x22][^\x27\x22\r\n]{1,80}~i', 90],
+        'BOOLEAN_PREDICATE' => ['~\b(?:or|and)\s+(?:exists\s*\(|\d+\s+(?:between\s+\d+|in\s*\(|is\s+(?:not\s+)?null))~i', 90],
+        'BOOLEAN_LITERAL' => ['~(?:[\x27\x22]\s*|\d+\s+)(?:or|and)\s+(?:true|false)\b~i', 90],
+        'STACKED_STATEMENT' => ['~;\s*(?:drop|truncate|delete|insert|update|alter|create|exec(?:ute)?)\b~i', 100],
+        'TIME_BASED' => ['~\b(?:sleep|benchmark|pg_sleep)\s*\(|\bwaitfor\s+delay\b~i', 95],
+        'ERROR_BASED' => ['~\b(?:extractvalue|updatexml)\s*\(~i', 95],
+        'FILE_ACCESS' => ['~\bload_file\s*\(|\binto\s+(?:out|dump)file\b~i', 95],
+        'QUOTE_COMMENT' => ['~[\x27\x22]\s*(?:--|\#|/\*)~', 60],
+        'SYSTEM_CATALOG' => ['~\b(?:information_schema|pg_catalog|sqlite_master|sysobjects)\b~i', 65],
+        'SELECT_STATEMENT' => ['~\bselect\b[^;\r\n]{1,1000}\bfrom\b~i', 45],
+        'WRITE_STATEMENT' => ['~\b(?:insert\s+into|delete\s+from|update\s+[\w`]+\s+set)\b~i', 60],
+        'ENCODED_SQL_FUNCTION' => ['~\b(?:char|nchar|chr)\s*\(\s*\d+(?:\s*,\s*\d+)+\s*\)~i', 45],
+    ];
+
+    public function __construct($logger = null, array $config = [])
+    {
+        // Logging belongs to the final middleware decision, never intermediate rules.
+        $this->blockMode = (bool) ($config['block_mode'] ?? true);
+        $this->blockThreshold = max(1, min(100, (int) ($config['block_threshold'] ?? 80)));
+        $this->reviewThreshold = max(1, min($this->blockThreshold, (int) ($config['review_threshold'] ?? 30)));
     }
-    
-    /**
-     * Analyse avec score comme dans le diagramme de séquence
-     */
-    public function analyzeWithScore($input, $paramName = '', $context = '') {
-        if (empty($input) || !is_string($input)) {
-            return [
-                'block' => false, 
-                'score' => 0, 
-                'patterns' => [], 
-                'needs_ai' => false,
-                'message' => 'Input vide ou non-string'
-            ];
-        }
-        
-        $input = urldecode($input);
+
+    public function analyzeWithScore($input, $paramName = '', $context = '')
+    {
         $score = 0;
-        $detectedPatterns = [];
-        
-        // 1. Pattern matching immédiat (comme dans le diagramme)
-        foreach ($this->patterns as $pattern => $patternScore) {
-            if (preg_match($pattern, $input)) {
-                $score += $patternScore;
-                $detectedPatterns[] = $pattern;
+        $detected = [];
+        $normalized = is_string($input) ? $this->normalize($input) : '';
+        // Both forms detect SQL tokens separated by comments and split inside a token.
+        $variants = [$normalized];
+        $variants[] = preg_replace('~/\*.*?\*/~s', ' ', $normalized);
+        $variants[] = preg_replace('~/\*.*?\*/~s', '', $normalized);
+        foreach ($this->patterns as $name => $rule) {
+            foreach ($variants as $variant) {
+                if (preg_match($rule[0], $variant) === 1) {
+                    $detected[] = $name;
+                    // Related signatures must not count the same evidence twice.
+                    $score = max($score, $rule[1]);
+                    break;
+                }
             }
         }
-        
-        // 2. Détection des caractères spéciaux
-        $specialChars = preg_match_all('/[\'"=;#()\-]/', $input);
-        if ($specialChars > 3) {
-            $score += $specialChars * 15;
-        }
-        
-        // 3. Longueur anormale
-        if (strlen($input) > 500) {
-            $score += 30;
-        }
-        
-        // 4. Décision comme dans le diagramme de séquence
-        $result = [
-            'block' => false,
+        $wouldBlock = $score >= $this->blockThreshold;
+        $needsAi = !$wouldBlock && $score >= $this->reviewThreshold;
+        $sensitive = preg_match('/pass|pwd|token|secret|cookie|authorization|card|carte|cvv|cvc|csrf/i', (string) $paramName);
+        return [
+            'block' => $this->blockMode && $wouldBlock,
+            'would_block' => $wouldBlock,
             'score' => $score,
-            'patterns' => $detectedPatterns,
-            'needs_ai' => false,
-            'input_preview' => substr($input, 0, 100)
+            'patterns' => $detected,
+            'needs_ai' => $needsAi,
+            'decision' => $wouldBlock ? ($this->blockMode ? 'IMMEDIATE_BLOCK' : 'MONITORED') : ($needsAi ? 'NEEDS_AI_ANALYSIS' : 'LOW_RISK_ALLOWED'),
+            'input_preview' => $sensitive ? '[REDACTED]' : substr($normalized, 0, 100),
         ];
-        
-        if ($score >= 80) {
-            // Règle détectée (score > 80) -> Blocage immédiat
-            $result['block'] = true;
-            $result['decision'] = 'IMMEDIATE_BLOCK';
-            
-            if ($this->logger) {
-                $this->logger->logAttack(
-                    $_SERVER['REMOTE_ADDR'] ?? 'unknown',
-                    'SQL_INJECTION_HIGH_SCORE',
-                    $input,
-                    $paramName,
-                    $score,
-                    $detectedPatterns,
-                    'BLOCKED'
-                );
+    }
+
+    private function normalize($input)
+    {
+        // rawurldecode preserves legitimate '+' characters. Bound decoding depth.
+        for ($i = 0; $i < 3; $i++) {
+            $decoded = rawurldecode($input);
+            if ($decoded === $input) {
+                break;
             }
-        } elseif ($score >= 30 && $score < 80) {
-            // Analyse IA nécessaire (score entre 30 et 80)
-            $result['needs_ai'] = true;
-            $result['decision'] = 'NEEDS_AI_ANALYSIS';
-            
-            if ($this->logger) {
-                $this->logger->logAttack(
-                    $_SERVER['REMOTE_ADDR'] ?? 'unknown',
-                    'SQL_INJECTION_SUSPICIOUS',
-                    $input,
-                    $paramName,
-                    $score,
-                    $detectedPatterns,
-                    'PENDING_IA'
-                );
-            }
-        } else {
-            // Risque faible -> Pas de blocage
-            $result['decision'] = 'LOW_RISK_ALLOWED';
+            $input = $decoded;
         }
-        
-        return $result;
+        $input = html_entity_decode($input, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        $input = str_replace("\0", '', $input);
+        if (strpos($input, '/*') !== false) {
+            // Restore split keywords first; remaining comments separate SQL tokens.
+            $comment = '(?:/\*[^*]*(?:\*(?!/)[^*]*)*\*/)*';
+            foreach (['union', 'select', 'all', 'distinct', 'or', 'and', 'sleep', 'benchmark', 'drop', 'delete', 'from', 'where', 'insert', 'update'] as $keyword) {
+                $pattern = '~\b' . implode($comment, str_split($keyword)) . '\b~i';
+                $input = preg_replace($pattern, $keyword, $input);
+            }
+        }
+        // MySQL executable comments contain actual SQL.
+        return preg_replace('~/\*!\d{0,6}\s*(.*?)\*/~s', ' $1 ', $input);
     }
-    
-    /**
-     * Version simple pour compatibilité
-     */
-    public function detect($input, $paramName = '') {
-        $analysis = $this->analyzeWithScore($input, $paramName);
-        return $analysis['block'];
+
+    public function detect($input, $paramName = '')
+    {
+        return $this->analyzeWithScore($input, $paramName)['block'];
     }
-    
-    public function sanitizeInput($input) {
+
+    public function setBlockMode($mode) { $this->blockMode = (bool) $mode; }
+    public function getBlockMode() { return $this->blockMode; }
+    public function getPatterns() { return array_keys($this->patterns); }
+
+    /** Compatibility helper for HTML output, not an SQL injection defense. */
+    public function sanitizeInput($input)
+    {
         if (is_array($input)) {
-            $result = [];
-            foreach ($input as $key => $value) {
-                $result[$key] = $this->sanitizeInput($value);
-            }
-            return $result;
+            return array_map([$this, 'sanitizeInput'], $input);
         }
-        
-        if (!is_string($input)) {
-            return $input;
-        }
-        
-        // Supprime les balises
-        $input = strip_tags($input);
-        
-        // Échappe les caractères spéciaux HTML
-        $input = htmlspecialchars($input, ENT_QUOTES, 'UTF-8');
-        
-        // Supprime les espaces multiples
-        $input = preg_replace('/\s+/', ' ', $input);
-        
-        return trim($input);
+        return is_string($input) ? htmlspecialchars($input, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') : $input;
     }
-    
-    public function setBlockMode($mode) {
-        $this->blockMode = (bool)$mode;
-    }
-    
-    public function getBlockMode() {
-        return $this->blockMode;
-    }
-    
-    public function escapeSql($input, $connection = null) {
-        if ($connection && $connection instanceof mysqli) {
+
+    public function escapeSql($input, $connection = null)
+    {
+        if ($connection instanceof mysqli) {
             return $connection->real_escape_string($input);
         }
-        return addslashes($input);
-    }
-    
-    /**
-     * Méthode utilitaire pour les tests
-     */
-    public function getPatterns() {
-        return array_keys($this->patterns);
+        throw new InvalidArgumentException('Une connexion SQL est requise ; utilisez des requêtes préparées.');
     }
 }
-?>

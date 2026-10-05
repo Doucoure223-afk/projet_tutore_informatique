@@ -1,0 +1,13 @@
+.runtime/
+tmp/
+logs/*
+!logs/.htaccess
+!logs/.gitkeep
+__pycache__/
+*.pyc
+.venv/
+config/local.php
+ia/models/*.joblib
+ia/models/*.tmp
+ia/models/synthetic_dataset.json
+

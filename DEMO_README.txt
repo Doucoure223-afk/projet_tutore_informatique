@@ -1,54 +1,24 @@
-DÉMO VULNÉRABLE - projet_tutoré_inf
-===================================
+CyberShield AI — MVP local
+=========================
 
-Ce projet est intentionnellement VULNÉRABLE pour la démonstration des attaques SQL Injection.
+Ce dépôt contient une démonstration locale de protection contre les injections SQL.
+La boutique est protégée par l'analyse CyberShield, des requêtes préparées et des jetons CSRF.
+Le laboratoire analyse le texte reçu sans exécuter de SQL.
 
-⚠️ NE JAMAIS utiliser en production !
+Pour installer et lancer le projet, lire README.md.
 
----
+Points d'entrée :
+  index.php                 accueil
+  security/dashboard.php   supervision et incidents
+  security/lab.php         analyse pédagogique isolée
+  app/search.php            boutique simulée
 
-SCÉNARIO DÉMO (e-commerce + SQLi)
---------------------------------
+Le service Python écoute uniquement sur 127.0.0.1. La base et les journaux restent locaux.
+La commande /health indique si le modèle est prêt. Si le MLP est indisponible, une entrée
+ambigüe est bloquée par précaution.
 
-1. Recherche
-   - Aller sur app/search.php
-   - Rechercher un produit (ex. "clavier"), ajouter au panier
-
-2. Panier
-   - app/panier.php : voir les articles, cliquer "Valider la commande"
-   - Redirection vers la page de connexion avec redirect=paiement
-
-3. Connexion SQLi (bypass authentification)
-   - app/login.php
-   - Payloads à utiliser (dans nom d'utilisateur ou mot de passe) :
-     · ' OR '1'='1'-- 
-     · ' OR 1=1#
-     · admin' -- 
-   - Après connexion : redirection vers paiement.php (si redirect=paiement)
-
-4. Paiement
-   - Connecté : récapitulatif, formulaire carte (simulé)
-   - Si rôle admin (ex. connecté avec admin' --) : bloc "Valider sans payer" + option paiement simulé
-   - Après validation : redirection panier.php?validated=1, message "Commande validée"
-
-5. Dashboard
-   - app/dashboard.php (après connexion) : profil, activités, thème clair/sombre
-   - Si admin : section "Recherche Admin" (SQLi sur users), débogage requêtes SQL
-
----
-
-DONNÉES DE TEST
----------------
-
-Base : projet_sqli_vulnerable (config.php)
-Tables : users, products, user_logs (optionnel)
-
-Exécuter les scripts SQL de création/seed si besoin (ex. database/ ou seed_products.sql).
-
----
-
-GUIDE COMPLET
--------------
-
-Pour la concordance avec le projet sécurisé (mon-projet-security) :
-→ Voir : mon-projet-security/DEMO_CONCORDANCE.md (si présent)
+Le jeu de 10 000 requêtes et les résultats expérimentaux décrits dans le dossier de
+candidature ne sont pas présents dans ce dépôt. Le MLP utilise un corpus synthétique
+de démonstration. Les rapports incluent aussi des évaluations publiques distinctes, dont une
+capture observée sur honeypot; le rappel du MLP seul y reste limité. Les métriques ne prouvent
+pas les performances annoncées dans les documents de référence ni ne certifient la production.

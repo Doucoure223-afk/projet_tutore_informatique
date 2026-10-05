@@ -1,37 +1,42 @@
 <?php
-require_once("config.php");
-   $error = null;
-    if (isset($_POST['Envoyer']) ) {
-            $user = $_POST['username'];
-            $pass = $_POST['password'];
-            $mail=$_POST['mail'];
-            $role= $_POST['role'];
-            $createtime = date('Y-m-d H:i:s');
-            $sql = "SELECT * FROM users Where username='$user' OR email='$mail'";
-            $result = mysqli_query($conn,$sql);
-
-            if(mysqli_num_rows($result)> 0) {
-                $error = "Cet utilisateur existe déjà";
-            }else{
-                $insertion=" INSERT INTO users(username,password,email,role,created_at )
-                             VALUES('$user','$pass','$mail','$role','$createtime')
-                 ";
-                mysqli_query($conn,$insertion);
-                header("location:login.php");
-            }
+require_once __DIR__ . '/config.php';
+$error = null;
+if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
+    validate_csrf_token();
+    $user = trim(input_text($_POST, 'username'));
+    $pass = input_text($_POST, 'password');
+    $mail = trim(input_text($_POST, 'mail'));
+    if (mb_strlen($user) < 3 || mb_strlen($user) > 50 || !filter_var($mail, FILTER_VALIDATE_EMAIL) || strlen($mail) > 100) {
+        $error = "Indiquez un nom de 3 à 50 caractères et une adresse e-mail valide.";
+    } elseif (strlen($pass) < 8 || strlen($pass) > 72) {
+        $error = 'Le mot de passe doit contenir entre 8 et 72 caractères.';
+    } else {
+        $result = execute_query_secure('SELECT id FROM users WHERE username = ? OR email = ?', [$user, $mail]);
+        if (!$result) {
+            $error = 'Inscription indisponible pour le moment.';
+        } elseif ($result->num_rows > 0) {
+            $error = "Ce nom d'utilisateur ou cette adresse e-mail existe déjà.";
+        } elseif (execute_query_secure("INSERT INTO users (username, password, email, role, created_at) VALUES (?, ?, ?, 'user', NOW())",
+            [$user, password_hash($pass, PASSWORD_DEFAULT), $mail])) {
+            header('Location: login.php?registered=1');
+            exit;
+        } else {
+            $error = 'Inscription impossible. Vérifiez les informations saisies.';
+        }
     }
-
+}
 ?>
 
 
 
 <!DOCTYPE html>
-<html lang="en">
+<html lang="fr">
         <head>
                 <meta charset="UTF-8">
                 <meta name="viewport" content="width=device-width, initial-scale=1.0">
                  <link rel="stylesheet" href="style_login.css">
-                <title>Inscription - Application Vulnérable</title>
+                 <link rel="stylesheet" href="theme.css">
+                <title>Inscription — CyberShield AI</title>
         </head>
         <body>
             <div class="container">   
@@ -40,8 +45,9 @@ require_once("config.php");
                         </div>
 
                         <div class="form-container">
-                            <?= (isset($error)) ? '<div class="error"><strong>'.$error.'</strong> </div>' :'' ?>
+                            <?= (isset($error)) ? '<div class="error"><strong>'.escape_output($error).'</strong> </div>' :'' ?>
                             <form action="" method="post">
+                                    <input type="hidden" name="csrf_token" value="<?= escape_output($_SESSION['csrf_token']) ?>">
                                     <div class="form-group">
                                         <label for="username">Nom d'utilisateur</label>
                                         <input type="text" name="username" required placeholder="Votre nom d'utilisateur" id="username" >
@@ -49,22 +55,17 @@ require_once("config.php");
 
                                     <div class="form-group">
                                         <label for="password">Mot de passe</label>
-                                        <input type="password" name="password" required placeholder="Votre mots de passe" id="password">
+                                        <input type="password" name="password" required placeholder="Mot de passe (8 caractères minimum)" id="password">
                                     </div>
                                     <div  class="form-group">
                                         <label for="email">Adresse mail</label>
                                         <input type="email" name="mail" required placeholder="Votre mail" id="email" >
                                     </div>
-                                    <div class="form-group" >
-                                        <select name="role">
-                                            <option value="admin">Admin</option>
-                                            <option value="user">user</option>
-                                        </select>
-                                    </div>
+
                                     <input type="submit" name="Envoyer"class="submit-btn"  value="Envoyer" >  
                             </form>
                             <div class="footer">
-                                <p> Vous avez deja un compte ? <a href="login.php">Connectez-vous</Connectez-vous></a></p>
+                                <p> Vous avez deja un compte ? <a href="login.php">Connectez-vous</a></p>
                             </div>
                         </div>
                         

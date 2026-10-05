@@ -1,0 +1,61 @@
+{
+  "evaluation": "independent_observed_honeypot_capture",
+  "dataset": {
+    "name": "SR-BH 2020 multi-label web honeypot requests",
+    "doi": "10.7910/DVN/OGOIXX",
+    "source_url": "https://dataverse.harvard.edu/dataset.xhtml?persistentId=doi:10.7910/DVN/OGOIXX",
+    "download_api": "https://dataverse.harvard.edu/api/access/datafile/6319496",
+    "license": "CC0 1.0",
+    "official_md5": "173ec515308bdce5aec19cfd5b792596",
+    "sha256": "9c73c90ce6564ae48b14f7179cd864d037a6a130ef69c68c1626ec5d7ce4a910",
+    "version": "1.2",
+    "source_rows_processed": 907815,
+    "evaluation_rows": 775506,
+    "strict_normal_rows": 525195,
+    "sqli_label_rows": 250311,
+    "sqli_rows_with_other_attack_labels": 2218,
+    "excluded_conflicting_normal_and_sqli_labels": 0,
+    "excluded_other_or_ambiguous_labels": 132309,
+    "gateway_rejected_rows": 0,
+    "labeled_rows_without_scanned_parameters": 0
+  },
+  "model": {
+    "version": "cybershield-mlp-demo-v1",
+    "sha256": "d7df929ffebf7791ab257f9048ae4962c2c91e57bb7e6c1a7ffd42a6ae9aa707",
+    "training_dataset": "synthetic_demo",
+    "threshold": 0.75,
+    "feature_schema": "sqli-features-v1",
+    "feature_count": 37
+  },
+  "protocol": "The unchanged model is applied to the decoded URL path and GET/POST/JSON/cookie values, matching the PHP middleware input scope. SQLi CAPEC labels are positive; strictly normal rows are negative. Other attack families and conflicting labels are excluded. No training or threshold selection uses this capture. MLP-only metrics exclude requests stopped by gateway size/depth limits; combined metrics count those rejects as blocks.",
+  "mlp_only_metrics": {
+    "rows": 775506,
+    "accuracy": 0.780071,
+    "precision": 0.965038,
+    "recall": 0.330601,
+    "specificity": 0.994292,
+    "f1": 0.492487,
+    "balanced_accuracy": 0.662446,
+    "confusion_matrix": {
+      "true_negative": 522197,
+      "false_positive": 2998,
+      "false_negative": 167558,
+      "true_positive": 82753
+    }
+  },
+  "gateway_plus_mlp_metrics": {
+    "rows": 775506,
+    "accuracy": 0.780071,
+    "precision": 0.965038,
+    "recall": 0.330601,
+    "specificity": 0.994292,
+    "f1": 0.492487,
+    "balanced_accuracy": 0.662446,
+    "confusion_matrix": {
+      "true_negative": 522197,
+      "false_positive": 2998,
+      "false_negative": 167558,
+      "true_positive": 82753
+    }
+  }
+}

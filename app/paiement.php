@@ -1,57 +1,57 @@
 <?php
-/**
- * Page de paiement - Affichage selon le rôle (admin / utilisateur)
- */
-require_once 'config.php';
-
-// Connexion obligatoire
-if (empty($_SESSION['logged_in']) || empty($_SESSION['username'])) {
+require_once __DIR__ . '/config.php';
+require_once __DIR__ . '/cart_helpers.php';
+validate_csrf_token();
+$user = current_user();
+if (!$user) {
     header('Location: login.php?redirect=paiement');
     exit;
 }
-
-// Panier requis
-$cart_items = $_SESSION['cart'] ?? [];
-if (empty($cart_items)) {
+$previous_cart = $_SESSION['cart'] ?? [];
+$cart_items = refresh_cart();
+if (!$cart_items) {
     header('Location: panier.php');
     exit;
 }
-
-$username = $_SESSION['username'];
-$role = $_SESSION['role'] ?? 'user';
-$is_admin = (strtolower($role) === 'admin');
-
-// Calcul du total
-$total = 0;
-foreach ($cart_items as $item) {
-    $total += $item['price'] * $item['qty'];
-}
+$username = $user['username'];
+$role = $user['role'];
+$is_admin = strtolower((string) $role) === 'admin';
+$total = cart_total($cart_items);
 $total_fmt = number_format($total, 2, ',', ' ');
-
-// Action : Valider sans payer (admin uniquement)
-if ($is_admin && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['validate_without_pay'])) {
-    $_SESSION['cart'] = [];
-    header('Location: panier.php?validated=1');
-    exit;
+$error = '';
+if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
+    $without_payment = isset($_POST['validate_without_pay']);
+    if ($without_payment && !$is_admin) {
+        http_response_code(403);
+        exit('Cette simulation est réservée aux administrateurs.');
+    }
+    if (!isset($_POST['pay']) && !$without_payment) {
+        http_response_code(400);
+        exit('Action de simulation invalide.');
+    }
+    if ($previous_cart !== $cart_items) {
+        $error = 'Le catalogue a changé. Vérifiez le récapitulatif puis confirmez de nouveau.';
+    } else {
+        $_SESSION['simulation_confirmation'] = [
+            'reference' => 'DEMO-' . strtoupper(bin2hex(random_bytes(4))),
+            'total' => $total,
+            'method' => $without_payment ? 'admin' : 'simulation',
+        ];
+        $_SESSION['cart'] = [];
+        log_user_action((int) $user['id'], $without_payment ? 'Simulation de commande administrateur' : 'Simulation de paiement');
+        header('Location: panier.php');
+        exit;
+    }
 }
-
-// Action : Payer (simulation)
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['pay'])) {
-    $_SESSION['cart'] = [];
-    header('Location: panier.php?validated=1');
-    exit;
-}
-
-// Réafficher succès sur panier si validated
-// (panier.php devra gérer ?validated=1 pour afficher le message succès)
 ?>
 <!DOCTYPE html>
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Paiement</title>
+    <title>Achat simulé — CyberShield AI</title>
     <link rel="stylesheet" href="style_paiement.css">
+    <link rel="stylesheet" href="theme.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
@@ -66,6 +66,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['pay'])) {
             </nav>
         </div>
 
+        <?php if ($error): ?><p class="admin-box" role="alert"><?= escape_output($error) ?></p><?php endif; ?>
         <div class="recap-card">
             <h2>Récapitulatif</h2>
             <?php foreach ($cart_items as $item): 
@@ -74,7 +75,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['pay'])) {
             ?>
             <div class="recap-item">
                 <span><?php echo htmlspecialchars($item['name']); ?> × <?php echo (int) $item['qty']; ?></span>
-                <span><?php echo $price_fmt; ?> €</span>
+                <span><?php echo $line_total; ?> €</span>
             </div>
             <?php endforeach; ?>
             <div class="recap-total">
@@ -86,9 +87,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['pay'])) {
         <?php if ($is_admin): ?>
         <div class="admin-box">
             <h3>Privilège administrateur</h3>
-            <p>En tant qu'admin, vous pouvez valider la commande sans passer par le paiement.</p>
+            <p>Testez le parcours administrateur. Cette validation reste une simulation.</p>
             <form method="POST" action="">
-                <button type="submit" name="validate_without_pay" class="btn-admin">Valider sans payer</button>
+                <input type="hidden" name="csrf_token" value="<?= escape_output($_SESSION['csrf_token']) ?>">
+                <button type="submit" name="validate_without_pay" class="btn-admin">Simuler la validation administrateur</button>
             </form>
         </div>
         <div class="separator">— ou simuler un paiement —</div>
@@ -97,22 +99,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['pay'])) {
         <div class="payment-card">
             <h3>Paiement simulé</h3>
             <form method="POST" action="">
-                <div class="form-row">
-                    <label for="card">Numéro de carte</label>
-                    <input type="text" id="card" name="card" value="4111 1111 1111 1111" placeholder="4111 1111 1111 1111">
-                </div>
-                <div class="form-row inline">
-                    <div>
-                        <label for="date">Date</label>
-                        <input type="text" id="date" name="date" value="MM/AA" placeholder="MM/AA">
-                    </div>
-                    <div>
-                        <label for="cvv">CVV</label>
-                        <input type="text" id="cvv" name="cvv" value="123" placeholder="123">
-                    </div>
-                </div>
-                <p class="demo-note">Aucune vérification réelle – démo uniquement.</p>
-                <button type="submit" name="pay" class="btn-pay">Payer <?php echo $total_fmt; ?> €</button>
+                <input type="hidden" name="csrf_token" value="<?= escape_output($_SESSION['csrf_token']) ?>">
+                <p class="demo-note">Achat fictif pour la démonstration CyberShield AI. Aucune donnée bancaire demandée, aucun prélèvement et aucune commande réelle.</p>
+                <button type="submit" name="pay" class="btn-pay">Simuler le paiement de <?php echo $total_fmt; ?> €</button>
             </form>
         </div>
     </div>

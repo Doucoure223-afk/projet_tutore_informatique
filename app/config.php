@@ -1,167 +1,100 @@
 <?php
-// Démarrage sécurisé de session
+declare(strict_types=1);
+
 if (session_status() === PHP_SESSION_NONE) {
-    // Configuration sécurisée des sessions
+    ini_set('session.use_strict_mode', '1');
+    ini_set('session.use_only_cookies', '1');
     session_set_cookie_params([
         'lifetime' => 0,
         'path' => '/',
-        'domain' => $_SERVER['HTTP_HOST'] ?? '',
-        'secure' => isset($_SERVER['HTTPS']),
+        'secure' => !empty($_SERVER['HTTPS']) && strtolower((string) $_SERVER['HTTPS']) !== 'off',
         'httponly' => true,
-        'samesite' => 'Strict'
+        'samesite' => 'Lax',
     ]);
     session_start();
-    
-    // Protection contre la fixation de session
-    if (empty($_SESSION['initiated'])) {
-        session_regenerate_id(true);
-        $_SESSION['initiated'] = true;
-        $_SESSION['ip_address'] = $_SERVER['REMOTE_ADDR'] ?? '';
-        $_SESSION['user_agent'] = $_SERVER['HTTP_USER_AGENT'] ?? '';
-    }
 }
-
-// Connexion MySQL vulnérable (pour démo)
-$servername = "localhost";
-$username = "root";
-$password = "";
-$dbname = "projet_sqli_vulnerable";
-
-// Connexion principale
-$conn = mysqli_connect($servername, $username, $password, $dbname);
-
-if (!$conn) {
-    // En production, loguer sans afficher de détails
-    error_log("Database connection failed");
-    die("Erreur de connexion à la base de données");
+if (!empty($_SESSION['last_activity']) && time() - (int) $_SESSION['last_activity'] > 1800) {
+    $_SESSION = [];
+    session_regenerate_id(true);
 }
-
-// Connexion sécurisée pour les logs
-$conn_logs = mysqli_connect($servername, $username, $password, $dbname);
-if (!$conn_logs) {
-    error_log("Logs database connection failed");
-    // On utilise la connexion principale en fallback
-    $conn_logs = $conn;
+if (empty($_SESSION['initiated'])) {
+    session_regenerate_id(true);
+    $_SESSION['initiated'] = true;
 }
-
-// Fonctions pour le système de sécurité
-function getDatabaseConnection() {
-    global $conn;
-    return $conn;
-}
-
-function getLogsDatabaseConnection() {
-    global $conn_logs;
-    return $conn_logs;
-}
-
-// Protection CSRF
+$_SESSION['last_activity'] = time();
 if (empty($_SESSION['csrf_token'])) {
     $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
 }
 
-function validate_csrf_token() {
-    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-        if (!isset($_POST['csrf_token']) || $_POST['csrf_token'] !== $_SESSION['csrf_token']) {
-            header('HTTP/1.1 403 Forbidden');
-            die("Erreur de sécurité CSRF");
-        }
+if (!defined('CYBERSHIELD_SKIP_REQUEST')) {
+    require_once __DIR__ . '/../security/middleware.php';
+    cybershield_protect();
+}
+
+require_once __DIR__ . '/SecureDataGateway.php';
+if (!extension_loaded('mysqli')) {
+    http_response_code(503);
+    exit('Extension mysqli absente. Utilisez le PHP de Wamp.');
+}
+mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
+try {
+    $conn = new mysqli(
+        getenv('DB_HOST') ?: 'localhost',
+        getenv('DB_USER') ?: 'root',
+        getenv('DB_PASSWORD') ?: '',
+        getenv('DB_NAME') ?: 'projet_sqli_vulnerable',
+        (int) (getenv('DB_PORT') ?: 3306)
+    );
+    $conn->set_charset('utf8mb4');
+    $conn_logs = $conn;
+    $gateway = new SecureDataGateway($conn);
+} catch (mysqli_sql_exception $e) {
+    error_log('CyberShield: connexion à la base indisponible (code ' . $e->getCode() . ').');
+    http_response_code(503);
+    exit('Base de démonstration indisponible. Vérifiez MySQL et importez database/schema.sql puis database/seed_products.sql.');
+}
+
+function getDatabaseConnection(): mysqli { global $conn; return $conn; }
+function getLogsDatabaseConnection(): mysqli { global $conn_logs; return $conn_logs; }
+function getDataGateway(): SecureDataGateway { global $gateway; return $gateway; }
+
+function escape_output($value): string {
+    return htmlspecialchars((string) $value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+}
+
+function input_text(array $source, string $key, string $default = ''): string {
+    return isset($source[$key]) && is_string($source[$key]) ? $source[$key] : $default;
+}
+
+function validate_csrf_token(): void {
+    if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST' &&
+        !hash_equals($_SESSION['csrf_token'], input_text($_POST, 'csrf_token'))) {
+        http_response_code(403);
+        exit('Formulaire expiré ou invalide. Rechargez la page avant de réessayer.');
     }
 }
 
-// Fonction pour exécuter des requêtes vulnérables (démonstration)
-function execute_query_vulnerable($sql) {
-    global $conn;
-    
-    // Mode rapport d'erreurs
-    mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
-    
+function execute_query_secure(string $sql, array $params = []) {
     try {
-        $result = mysqli_query($conn, $sql);
-        
-        if (!$result) {
-            // Affichage contrôlé des erreurs (uniquement en développement)
-            if (isset($_GET['debug']) && $_GET['debug'] == '1') {
-                echo "<div style='background:#ffcccc;padding:10px;margin:10px;border:1px solid red;'>";
-                echo "<strong>ERREUR SQL:</strong> " . mysqli_error($conn) . "<br>";
-                echo "<strong>Requête:</strong> " . htmlspecialchars($sql);
-                echo "</div>";
-            }
-            return false;
-        }
-        
-        return $result;
+        return getDataGateway()->execute($sql, $params);
     } catch (mysqli_sql_exception $e) {
-        // Log en production, affichage limité en dev
-        error_log("SQL Exception: " . $e->getMessage());
-        
-        if (isset($_GET['debug']) && $_GET['debug'] == '1') {
-            echo "<div style='background:#ffcccc;padding:10px;margin:10px;border:1px solid red;'>";
-            echo "<strong>EXCEPTION SQL:</strong> " . htmlspecialchars($e->getMessage()) . "<br>";
-            echo "<strong>Requête:</strong> " . htmlspecialchars($sql);
-            echo "</div>";
-        }
+        error_log('CyberShield: opération de base refusée (code ' . $e->getCode() . ').');
         return false;
     }
 }
 
-// Fonction pour exécuter des requêtes sécurisées
-function execute_query_secure($sql, $params = []) {
-    global $conn;
-    
-    try {
-        $stmt = mysqli_prepare($conn, $sql);
-        if (!$stmt) {
-            error_log("Prepare failed: " . mysqli_error($conn));
-            return false;
-        }
-        
-        if (!empty($params)) {
-            $types = '';
-            $bind_params = [];
-            
-            foreach ($params as $param) {
-                if (is_int($param)) {
-                    $types .= 'i';
-                } elseif (is_double($param)) {
-                    $types .= 'd';
-                } else {
-                    $types .= 's';
-                }
-                $bind_params[] = $param;
-            }
-            
-            mysqli_stmt_bind_param($stmt, $types, ...$bind_params);
-        }
-        
-        if (!mysqli_stmt_execute($stmt)) {
-            error_log("Execute failed: " . mysqli_stmt_error($stmt));
-            mysqli_stmt_close($stmt);
-            return false;
-        }
-        
-        $result = mysqli_stmt_get_result($stmt);
-        mysqli_stmt_close($stmt);
-        
-        return $result;
-    } catch (Exception $e) {
-        error_log("Secure query exception: " . $e->getMessage());
-        return false;
-    }
+function log_user_action(int $userId, string $action): void {
+    execute_query_secure('INSERT INTO user_logs (user_id, action, ip_address) VALUES (?, ?, ?)',
+        [$userId, $action, $_SERVER['REMOTE_ADDR'] ?? '']);
 }
 
-// Configuration globale
-define('APP_ENV', 'development'); // 'development' ou 'production'
-define('MAX_UPLOAD_SIZE', 2 * 1024 * 1024); // 2MB
-define('SESSION_TIMEOUT', 1800); // 30 minutes
-
-// Fonction pour déterminer l'environnement
-function is_development() {
-    return APP_ENV === 'development';
+function current_user(): ?array {
+    if (empty($_SESSION['logged_in']) || empty($_SESSION['user_id'])) { return null; }
+    $result = execute_query_secure('SELECT id, username, email, role, created_at FROM users WHERE id = ? AND active = 1',
+        [(int) $_SESSION['user_id']]);
+    return $result ? ($result->fetch_assoc() ?: null) : null;
 }
 
-// Fonction pour échapper les sorties
-function escape_output($string) {
-    return htmlspecialchars($string, ENT_QUOTES | ENT_HTML5, 'UTF-8');
-}
-?>
+if (!defined('APP_ENV')) { define('APP_ENV', getenv('APP_ENV') ?: 'development'); }
+if (!defined('SESSION_TIMEOUT')) { define('SESSION_TIMEOUT', 1800); }
+function is_development(): bool { return APP_ENV === 'development'; }
