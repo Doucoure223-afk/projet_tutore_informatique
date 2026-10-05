@@ -20,7 +20,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
 }
 $health = console_health();
 ?>
-<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#0a1018"><title>Laboratoire · CyberShield AI</title><link rel="stylesheet" href="console.css"></head>
+<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#f1efe8"><title>Laboratoire · CyberShield AI</title><link rel="stylesheet" href="console.css"></head>
 <body><div class="shell"><?php console_sidebar('lab'); ?><main class="main">
   <div class="topline"><div class="headline"><p class="eyebrow">LABORATOIRE · ANALYSE SANS EXÉCUTION</p><h1>Étudier une saisie</h1><p class="muted">Le laboratoire calcule une décision. Il ne transmet la saisie à aucune requête SQL et ne l’ajoute pas au journal des incidents.</p></div><span class="badge <?=!empty($health['model_loaded'])?'ok':'warn'?>"><span class="dot"></span>MLP <?=!empty($health['model_loaded'])?'disponible':'indisponible'?></span></div>
   <div class="grid"><section class="card"><div class="card-head"><div><h2>Nouvelle analyse</h2><p class="sub">Heuristique rapide, puis MLP seulement dans la zone grise.</p></div></div>

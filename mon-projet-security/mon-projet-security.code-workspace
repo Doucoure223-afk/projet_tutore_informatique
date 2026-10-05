@@ -1,0 +1,13 @@
+{
+	"folders": [
+		{
+			"path": "."
+		},
+		{
+			"path": "../projet_tutoré_inf"
+		}
+	],
+	"settings": {
+		"liveServer.settings.multiRootWorkspaceName": "mon-projet-security"
+	}
+}

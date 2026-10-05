@@ -47,7 +47,7 @@ h2 { font-size: 22px; font-weight: 660; }
 h3 { font-size: 18px; font-weight: 650; }
 :focus-visible { outline: 3px solid #82a894; outline-offset: 3px; }
 .container { width: min(1120px, 100%); max-width: 1120px; margin: 38px auto; }
-.container:has(.form-container) { width: min(520px, 100%); margin: min(8vh, 76px) auto; overflow: hidden; background: var(--app-surface); border: 1px solid var(--app-line); border-radius: 8px; }
+.container:has(.form-container) { position: relative; width: min(520px, 100%); margin: min(8vh, 76px) auto; overflow: hidden; background: var(--app-surface); border: 1px solid var(--app-line); border-radius: 8px; }
 .header {
   padding: 27px 30px;
   margin-bottom: 22px;
@@ -108,6 +108,14 @@ input:focus, select:focus, textarea:focus, .search-input:focus, .admin-search in
 .btn-pay:hover, .btn-admin:hover, .submit-btn:hover, .btn-primary:hover {
   background: var(--app-accent-hover); border-color: var(--app-accent-hover); color: #fff;
 }
+:root[data-theme="dark"] .search-btn, :root[data-theme="dark"] .btn-add-cart,
+:root[data-theme="dark"] .btn-search, :root[data-theme="dark"] .btn-validate,
+:root[data-theme="dark"] .btn-pay, :root[data-theme="dark"] .submit-btn,
+:root[data-theme="dark"] .btn-primary { color: #252c28; }
+:root[data-theme="dark"] .search-btn:hover, :root[data-theme="dark"] .btn-add-cart:hover,
+:root[data-theme="dark"] .btn-search:hover, :root[data-theme="dark"] .btn-validate:hover,
+:root[data-theme="dark"] .btn-pay:hover, :root[data-theme="dark"] .submit-btn:hover,
+:root[data-theme="dark"] .btn-primary:hover { color: #252c28; }
 .search-btn:active, .btn-add-cart:active, .btn-search:active, .btn-validate:active,
 .btn-pay:active, .btn-admin:active, .submit-btn:active, .btn-primary:active { transform: translateY(1px); }
 .submit-btn { width: 100%; min-height: 46px; font-size: 15px; }
@@ -184,6 +192,7 @@ input:focus, select:focus, textarea:focus, .search-input:focus, .admin-search in
 .admin-box h3 { margin: 0 0 6px; color: var(--app-danger); }
 .admin-box p { color: var(--app-muted); margin: 0 0 14px; }
 .admin-box .btn-admin { background: var(--app-danger); border-color: var(--app-danger); }
+:root[data-theme="dark"] .admin-box .btn-admin { color: #252c28; }
 .admin-box .btn-admin:hover { background: #843a35; border-color: #843a35; }
 .separator { margin: 19px 0; color: var(--app-muted); font-size: 13px; }
 .payment-card h3 { margin-bottom: 12px; }
@@ -201,14 +210,14 @@ input:focus, select:focus, textarea:focus, .search-input:focus, .admin-search in
 .debug h4 { color: var(--app-accent); }
 .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin: 24px 0; }
 .dashboard { display: grid; grid-template-columns: 236px 1fr; min-height: calc(100vh - 40px); max-width: 1600px; margin: 20px auto; background: var(--app-bg); }
-.sidebar { background: #303a34; color: #f0f1e9; border-right: 1px solid #465149; padding: 23px 18px; }
+.sidebar { display: flex; flex-direction: column; gap: 18px; background: #303a34; color: #f0f1e9; border-right: 1px solid #465149; padding: 23px 18px; }
 .sidebar-brand { color: #edf0e9; font-size: 17px; font-weight: 680; letter-spacing: -.025em; }
 .sidebar-brand i { color: #a8c6b3; }
 .sidebar-nav { display: flex; flex-direction: column; gap: 3px; }
 .nav-item { padding: 10px 11px; border-radius: 5px; color: #e1e6df; font-size: 13px; }
 .nav-item:hover, .nav-item.active { background: #43554a; color: #fff; }
-.sidebar-user { border-color: #58645b; }
-.user-avatar { background: #64866e; color: #fff; border-radius: 5px; }
+.sidebar-user { margin-top: auto; padding-top: 20px; border-top: 1px solid #58645b; text-align: center; }
+.user-avatar { display: flex; align-items: center; justify-content: center; width: 46px; height: 46px; margin: 0 auto 10px; background: #64866e; color: #fff; border-radius: 5px; }
 .main-content { padding: clamp(24px, 4vw, 54px); color: var(--app-text); }
 .dashboard-header { margin-bottom: 25px; }
 .dashboard-header h1 { margin: 0 0 8px; font-size: clamp(30px, 3.2vw, 40px); font-family: "Iowan Old Style", "Palatino Linotype", Georgia, serif; font-weight: 600; letter-spacing: -.04em; }

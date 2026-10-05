@@ -19,6 +19,7 @@ from features import FEATURE_NAMES, FEATURE_SCHEMA, MAX_SQL_LENGTH, attack_type,
 
 BASE = Path(__file__).resolve().parent
 MAX_BODY_BYTES = 32768
+EXPECTED_MODEL_VERSION = "cybershield-mlp-httpparams-v2"
 
 
 class SlidingWindowLimiter:
@@ -61,15 +62,15 @@ def load_model(path):
         raise ValueError("Unexpected MLP architecture")
     if classifier.n_features_in_ != len(FEATURE_NAMES) or list(classifier.classes_) != [0, 1]:
         raise ValueError("Unexpected input or output dimensions")
-    if artifact.get("threshold") != 0.75 or not artifact.get("model_version"):
-        raise ValueError("Missing version or incorrect decision threshold")
+    if artifact.get("threshold") != 0.75 or artifact.get("model_version") != EXPECTED_MODEL_VERSION:
+        raise ValueError("Model version is stale or decision threshold is incorrect; retrain with ia/train.py")
     probe = classifier.predict_proba(scaler.transform(np.zeros((1, len(FEATURE_NAMES)))))
     if not np.isfinite(probe).all():
         raise ValueError("Model returned a non-finite probability")
     return artifact
 
 
-def create_app(model_path=BASE / "models" / "model.joblib", rate_limit=120):
+def create_app(model_path=BASE / "models" / "model.joblib", rate_limit=420):
     app = Flask(__name__)
     app.config.update(MAX_CONTENT_LENGTH=MAX_BODY_BYTES, JSON_SORT_KEYS=False)
     limiter = SlidingWindowLimiter(limit=rate_limit)
@@ -97,7 +98,7 @@ def create_app(model_path=BASE / "models" / "model.joblib", rate_limit=120):
                        model_version=artifact["model_version"] if artifact else None,
                        version=artifact["model_version"] if artifact else None,
                        analysis_method="MLP", dataset_source=artifact["dataset_source"] if artifact else None,
-                       threshold=0.75), 200 if artifact else 503
+                       threshold=0.75, rate_limit=rate_limit), 200 if artifact else 503
 
     @app.post("/analyse")
     def analyse():
@@ -138,14 +139,16 @@ if __name__ == "__main__":
     from waitress import serve
 
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--host", choices=("127.0.0.1", "0.0.0.0"), default="127.0.0.1",
+                        help="Bind address; use 0.0.0.0 only inside a private container network")
     parser.add_argument("--port", type=int, default=5000)
     parser.add_argument("--model", type=Path, default=BASE / "models" / "model.joblib")
-    parser.add_argument("--rate-limit", type=int, default=120, help="Requests per sliding 60 seconds, per local caller IP")
+    parser.add_argument("--rate-limit", type=int, default=420, help="Requests per sliding 60 seconds, per local caller IP")
     args = parser.parse_args()
     if not 1 <= args.port <= 65535 or not 1 <= args.rate_limit <= 10000:
         parser.error("Invalid port or rate limit")
     app = create_app(args.model, args.rate_limit)
-    print(f"CyberShield MLP listening on http://127.0.0.1:{args.port}", flush=True)
-    serve(app, host="127.0.0.1", port=args.port, threads=4, connection_limit=32,
+    print(f"CyberShield MLP listening on http://{args.host}:{args.port}", flush=True)
+    serve(app, host=args.host, port=args.port, threads=4, connection_limit=32,
           backlog=32, channel_timeout=5, cleanup_interval=1, max_request_body_size=MAX_BODY_BYTES,
           max_request_header_size=8192, expose_tracebacks=False)

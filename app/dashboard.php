@@ -30,11 +30,7 @@ if ($admin_query !== '') {
     <title>Dashboard</title>
     <script>(function(){var t=localStorage.getItem('theme');if(t==='light'||t==='dark')document.documentElement.setAttribute('data-theme',t);})();</script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style_dashboard.css">
-    <link rel="stylesheet" href="theme.css">
-    <link rel="stylesheet" href="theme.css">
-    <link rel="stylesheet" href="theme.css">
 </head>
 <body>
     <div class="dashboard">

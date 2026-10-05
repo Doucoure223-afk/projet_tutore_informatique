@@ -56,7 +56,6 @@ $total = number_format(cart_total($cart_items), 2, ',', ' ');
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Mon panier</title>
     <link rel="stylesheet" href="style_panier.css">
-    <link rel="stylesheet" href="theme.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>

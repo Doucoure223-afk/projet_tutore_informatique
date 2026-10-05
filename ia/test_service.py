@@ -6,9 +6,10 @@ import unittest
 
 from dataset import build_dataset
 from evaluate_external import evaluate
-from evaluate_honeypot import GatewayRejected, request_inputs
+from evaluate_honeypot import GatewayRejected, heuristic_score, request_inputs
 from features import extract_features, normalize
 from service import BASE, SlidingWindowLimiter, create_app
+from train import DEFAULT_DATASET, EXPECTED_DATASET_SHA256, load_dataset
 
 
 class FeatureTests(unittest.TestCase):
@@ -44,6 +45,32 @@ class FeatureTests(unittest.TestCase):
             self.assertEqual({row["label"] for row in rows}, {0, 1})
         self.assertFalse(groups["train"] & groups["validation"])
         self.assertFalse(values["train"] & values["validation"])
+
+
+class HttpParamsTrainingDataTests(unittest.TestCase):
+    def test_pinned_training_split_and_binary_selection(self):
+        from train import sha256_file
+        rows, classes, excluded, digest = load_dataset(DEFAULT_DATASET)
+        self.assertEqual(digest, EXPECTED_DATASET_SHA256)
+        self.assertEqual(sha256_file(DEFAULT_DATASET), EXPECTED_DATASET_SHA256)
+        self.assertEqual(len(rows), 20105)
+        self.assertEqual(classes, {"norm": 12870, "sqli": 7235})
+        self.assertEqual(excluded, {"xss": 355, "path-traversal": 193, "cmdi": 59})
+
+
+class DetectorRuleMirrorTests(unittest.TestCase):
+    def test_rule_thresholds_match_php_signatures(self):
+        examples = {
+            "1 UNION SELECT password FROM users": 95,
+            "1 OR 1=1": 90,
+            "'; DROP TABLE users; --": 100,
+            "admin' --": 60,
+            "SELECT name FROM users": 45,
+            "Bonjour Bamako": 0,
+        }
+        for payload, expected in examples.items():
+            with self.subTest(payload=payload):
+                self.assertEqual(heuristic_score(payload), expected)
 
 
 class HoneypotInputParsingTests(unittest.TestCase):
@@ -121,6 +148,7 @@ class TrainedModelIntegrationTests(unittest.TestCase):
         response = self.client.get("/health")
         self.assertEqual(response.status_code, 200)
         self.assertTrue(response.json["model_loaded"])
+        self.assertEqual(response.json["rate_limit"], 420)
         artifact = self.app.extensions["cybershield_model"]
         self.assertEqual([list(layer.shape) for layer in artifact["classifier"].coefs_][1:], [[128, 64], [64, 32], [32, 1]])
         self.assertEqual(artifact["classifier"].solver, "adam")
@@ -146,9 +174,9 @@ class TrainedModelIntegrationTests(unittest.TestCase):
         self.assertEqual(report["dataset"]["excluded_non_sqli_attacks"], {"cmdi": 30, "path-traversal": 97, "xss": 177})
         self.assertEqual(report["metrics"]["confusion_matrix"], {
             "true_negative": 6433, "false_positive": 1,
-            "false_negative": 238, "true_positive": 3379,
+            "false_negative": 5, "true_positive": 3612,
         })
-        self.assertEqual(report["metrics"]["f1"], 0.965843)
+        self.assertEqual(report["metrics"]["f1"], 0.99917)
 
 
 if __name__ == "__main__":

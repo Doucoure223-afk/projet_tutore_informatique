@@ -1,5 +1,5 @@
 {
-  "evaluation": "independent_observed_honeypot_capture",
+  "evaluation": "development_replay_on_observed_honeypot_capture",
   "dataset": {
     "name": "SR-BH 2020 multi-label web honeypot requests",
     "doi": "10.7910/DVN/OGOIXX",
@@ -20,42 +20,92 @@
     "labeled_rows_without_scanned_parameters": 0
   },
   "model": {
-    "version": "cybershield-mlp-demo-v1",
-    "sha256": "d7df929ffebf7791ab257f9048ae4962c2c91e57bb7e6c1a7ffd42a6ae9aa707",
-    "training_dataset": "synthetic_demo",
+    "version": "cybershield-mlp-httpparams-v2",
+    "sha256": "94777a563f51f7c357743afb2c257d0fcddbc79f3bd17d3484feab92fa38cb2e",
+    "training_dataset": "HttpParamsDataset_payload_train",
     "threshold": 0.75,
     "feature_schema": "sqli-features-v1",
     "feature_count": 37
   },
-  "protocol": "The unchanged model is applied to the decoded URL path and GET/POST/JSON/cookie values, matching the PHP middleware input scope. SQLi CAPEC labels are positive; strictly normal rows are negative. Other attack families and conflicting labels are excluded. No training or threshold selection uses this capture. MLP-only metrics exclude requests stopped by gateway size/depth limits; combined metrics count those rejects as blocks.",
+  "protocol": "The unchanged model is applied to the decoded URL path and GET/POST/JSON/cookie values, matching the PHP middleware input scope. SQLi CAPEC labels are positive; strictly normal rows are negative. Other attack families and conflicting labels are excluded. Model training and its 0.75 decision threshold did not use this capture. Runtime-hybrid metrics replay detector.php rules, immediate blocks, MLP screening of up to the first four non-immediately-blocked request values, and fail-safe blocking for gray-zone values after that budget. Previous gray-zone-only results are retained for comparison. The pre-screen policy was selected after diagnostic replay on this same capture, so hybrid metrics are development measurements rather than an untouched confirmation. The Python rule mirror is regression-tested against representative PHP signatures; this is not an end-to-end HTTP load test.",
   "mlp_only_metrics": {
     "rows": 775506,
-    "accuracy": 0.780071,
-    "precision": 0.965038,
-    "recall": 0.330601,
-    "specificity": 0.994292,
-    "f1": 0.492487,
-    "balanced_accuracy": 0.662446,
+    "accuracy": 0.911322,
+    "precision": 0.86516,
+    "recall": 0.859167,
+    "specificity": 0.93618,
+    "f1": 0.862153,
+    "balanced_accuracy": 0.897674,
     "confusion_matrix": {
-      "true_negative": 522197,
-      "false_positive": 2998,
-      "false_negative": 167558,
-      "true_positive": 82753
+      "true_negative": 491677,
+      "false_positive": 33518,
+      "false_negative": 35252,
+      "true_positive": 215059
     }
   },
   "gateway_plus_mlp_metrics": {
     "rows": 775506,
-    "accuracy": 0.780071,
-    "precision": 0.965038,
-    "recall": 0.330601,
-    "specificity": 0.994292,
-    "f1": 0.492487,
-    "balanced_accuracy": 0.662446,
+    "accuracy": 0.911322,
+    "precision": 0.86516,
+    "recall": 0.859167,
+    "specificity": 0.93618,
+    "f1": 0.862153,
+    "balanced_accuracy": 0.897674,
     "confusion_matrix": {
-      "true_negative": 522197,
-      "false_positive": 2998,
-      "false_negative": 167558,
-      "true_positive": 82753
+      "true_negative": 491677,
+      "false_positive": 33518,
+      "false_negative": 35252,
+      "true_positive": 215059
     }
-  }
+  },
+  "previous_gray_zone_only_metrics": {
+    "rows": 775506,
+    "accuracy": 0.723218,
+    "precision": 0.802826,
+    "recall": 0.188869,
+    "specificity": 0.977892,
+    "f1": 0.305798,
+    "balanced_accuracy": 0.583381,
+    "confusion_matrix": {
+      "true_negative": 513584,
+      "false_positive": 11611,
+      "false_negative": 203035,
+      "true_positive": 47276
+    }
+  },
+  "previous_gray_zone_only_policy": {
+    "rules": "security/detector.php SQLi signatures; maximum matching score is used",
+    "review_threshold": 30,
+    "block_threshold": 80,
+    "max_mlp_calls_per_request": 4,
+    "budget_exceeded": "fail-safe block",
+    "note": "Replay of the PHP decision policy with an equivalent Python rule mirror; not an end-to-end HTTP load test."
+  },
+  "runtime_hybrid_metrics": {
+    "rows": 775506,
+    "accuracy": 0.910455,
+    "precision": 0.865092,
+    "recall": 0.856075,
+    "specificity": 0.936372,
+    "f1": 0.86056,
+    "balanced_accuracy": 0.896224,
+    "confusion_matrix": {
+      "true_negative": 491778,
+      "false_positive": 33417,
+      "false_negative": 36026,
+      "true_positive": 214285
+    }
+  },
+  "runtime_hybrid_policy": {
+    "rules": "security/detector.php immediate-block signatures remain first",
+    "mlp_values": "first four request values also receive MLP screening below the current review threshold",
+    "max_mlp_calls_per_request": 4,
+    "budget_exceeded": "scores in the existing 30..79 review zone fail-safe block; lower scores skip MLP",
+    "note": "Replay of the current middleware decision policy with an equivalent Python rule mirror; not an end-to-end HTTP load test.",
+    "review_threshold": 30,
+    "block_threshold": 80,
+    "policy_selection_note": "This first-four-value pre-screen policy was selected after diagnostic replay on the full capture; its reported metrics are development measurements, not an untouched post-selection confirmation. Model weights and the MLP 0.75 threshold were not tuned on this capture."
+  },
+  "model_was_trained_on_capture": false,
+  "gate_policy_selected_after_diagnostic_replay": true
 }

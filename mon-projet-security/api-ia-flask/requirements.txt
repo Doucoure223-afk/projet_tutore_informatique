@@ -1,0 +1,15 @@
+# API IA - Module d'analyse des menaces SQLi (aligné architecture 2026)
+Flask>=3.0.0
+Werkzeug>=3.0.0
+# ML : modèle entraîné (détection SQLi)
+scikit-learn>=1.3.0
+numpy>=1.24.0
+joblib>=1.3.0
+# BDD pour l'assistant chat (dashboard)
+pymysql>=1.1.0
+# Chargement du fichier .env (config MySQL)
+python-dotenv>=1.0.0
+# LLM optionnel pour le chat (questions libres)
+openai>=1.0.0
+# Courbes d'apprentissage (Figure 4.3)
+matplotlib>=3.7.0

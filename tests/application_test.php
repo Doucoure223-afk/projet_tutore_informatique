@@ -70,7 +70,7 @@ try {
     import_app_sql($db, $seed);
     check_app((int) $db->query('SELECT COUNT(*) FROM products')->fetch_row()[0] === 8, 'Double import sans doublons');
     check_app((float) $db->query('SELECT price FROM products WHERE id = 1')->fetch_row()[0] === 7.5, 'Seed preserve les produits existants');
-    check_app((int) $db->query('SELECT COUNT(*) FROM users')->fetch_row()[0] === 2, 'Comptes de demonstration idempotents');
+    check_app((int) $db->query('SELECT COUNT(*) FROM users')->fetch_row()[0] === 0, 'Aucun compte partagé créé par défaut');
     require_once $root . '/app/SecureDataGateway.php';
     $gateway = new SecureDataGateway($db);
     check_app($gateway->execute('SELECT id FROM users WHERE username = ?', ["' OR 1=1 -- "])->num_rows === 0, 'Gateway refuse le contournement SQLi');
@@ -97,9 +97,19 @@ try {
         catch (RuntimeException $e) { usleep(100000); }
     }
     check_app($ready && $response['status'] === 200, 'Catalogue HTTP disponible');
+    require_once $root . '/security/ip_access.php';
+    $testIpPolicy = new IpAccessControl($directory);
+    $testIpPolicy->addRule('127.0.0.1', 'middleware integration');
+    check_app(app_request('/app/search.php')['status'] === 403, 'Regle IP refuse une requete applicative');
+    $events = array_map(static fn(string $line) => json_decode($line, true), file($directory . '/events.jsonl', FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES));
+    $ipEvents = array_values(array_filter($events, static fn($event) => is_array($event) && ($event['attack_type'] ?? '') === 'IP_ACCESS_RULE'));
+    check_app(($ipEvents[0]['action'] ?? '') === 'BLOCKED' && ($ipEvents[0]['source'] ?? '') === 'ip_policy', 'Refus IP ajouté au journal structuré');
+    $testIpPolicy->removeRule('127.0.0.1');
+    check_app(app_request('/app/search.php')['status'] === 200, 'Suppression de regle IP retablit la requete');
     $token = app_token($response);
     $pathPayload = rawurlencode("' OR '1'='1 --");
     check_app(app_request('/app/search.php/' . $pathPayload)['status'] === 403, 'Injection SQLi dans le chemin URL bloquee');
+    check_app(app_request('/app/search.php?q=%27a%27%3D%27a%27')['status'] === 403, 'Preselection MLP bloque une injection sans signature PHP');
     check_app(app_request('/app/search.php/' . str_repeat('a', 8193))['status'] === 413, 'Chemin URL trop long refuse');
     check_app(app_request('/app/panier.php', ['action' => 'add', 'product_id' => '1'])['status'] === 403, 'Ajout sans CSRF refuse');
     $response = app_request('/app/panier.php?add=1&validated=1');
@@ -130,10 +140,71 @@ try {
     app_request('/app/logout.php', ['csrf_token' => $token]);
     $response = app_request('/app/login.php');
     $token = app_token($response);
+    for ($attempt = 0; $attempt < 5; $attempt++) {
+        $response = app_request('/app/login.php', ['username' => 'throttle_probe', 'password' => 'invalid', 'csrf_token' => $token]);
+    }
+    $response = app_request('/app/login.php', ['username' => 'throttle_probe', 'password' => 'invalid', 'csrf_token' => $token]);
+    check_app(str_contains($response['body'], 'Trop de tentatives') && !str_contains($response['url'], 'dashboard.php'),
+        'Connexion ne limite pas les tentatives répétées');
+    $response = app_request('/app/login.php');
+    $token = app_token($response);
     $response = app_request('/app/login.php', ['username' => 'legacy_test', 'password' => 'LegacyPassword!2026', 'csrf_token' => $token]);
     check_app(str_contains($response['url'], 'dashboard.php'), 'Compatibilite anciens comptes demo');
     $db->query("UPDATE users SET active = 0 WHERE username = 'legacy_test'");
     check_app(str_contains(app_request('/app/dashboard.php')['url'], 'login.php'), 'Compte desactive perd son acces');
+    $response = app_request('/security/ip-rules.php');
+    check_app($response['status'] === 200 && str_contains($response['body'], 'Règles d’adresses IP'), 'Console IP accessible en local');
+    $consoleToken = app_token($response);
+    $response = app_request('/security/dashboard.php');
+    check_app($response['status'] === 200 && str_contains($response['body'], 'Blocage SQLi') && str_contains($response['body'], 'JSONL / SIEM'),
+        'Supervision ne présente pas clairement le mode actif et les exports');
+    $response = app_request('/security/dashboard.php?export=jsonl&action=BLOCKED');
+    $jsonlEvents = array_values(array_filter(explode("\n", trim($response['body']))));
+    $jsonlValid = $response['status'] === 200 && count($jsonlEvents) > 0;
+    foreach ($jsonlEvents as $line) {
+        $event = json_decode($line, true);
+        $jsonlValid = $jsonlValid && is_array($event) && ($event['action'] ?? '') === 'BLOCKED';
+    }
+    check_app($jsonlValid, 'Export SIEM JSONL invalide ou sans application des filtres');
+    check_app(app_request('/security/ip-rules.php', ['operation' => 'add', 'ip' => '203.0.113.44', 'csrf_token' => 'invalid'])['status'] === 403,
+        'Mutation de règle IP sans CSRF refusée');
+    $response = app_request('/security/ip-rules.php', ['operation' => 'add', 'ip' => '203.0.113.44', 'comment' => 'integration test', 'csrf_token' => $consoleToken]);
+    check_app($response['status'] === 200 && str_contains($response['body'], '203.0.113.44'), 'Ajout IP affiché après redirection');
+    $response = app_request('/security/ip-rules.php', ['operation' => 'remove', 'ip' => '203.0.113.44', 'csrf_token' => $consoleToken]);
+    check_app($response['status'] === 200 && !str_contains($response['body'], '203.0.113.44'), 'Suppression IP protégée par CSRF');
+    $legacyPasswordHash = password_hash('RetiredDemoPassword!2026', PASSWORD_DEFAULT);
+    $legacyInsert = $db->prepare('INSERT INTO users (username, password, email, role) VALUES (?, ?, ?, ?)');
+    $legacyUser = 'cybershield_admin'; $legacyEmail = 'admin@cybershield.test'; $legacyRole = 'admin';
+    $legacyInsert->bind_param('ssss', $legacyUser, $legacyPasswordHash, $legacyEmail, $legacyRole); $legacyInsert->execute();
+    $legacyUser = 'cybershield_client'; $legacyEmail = 'client@cybershield.test'; $legacyRole = 'user';
+    $legacyInsert->bind_param('ssss', $legacyUser, $legacyPasswordHash, $legacyEmail, $legacyRole); $legacyInsert->execute();
+    $response = app_request('/app/login.php');
+    $response = app_request('/app/login.php', ['username' => 'cybershield_admin', 'password' => 'RetiredDemoPassword!2026', 'csrf_token' => app_token($response)]);
+    check_app(!str_contains($response['url'], 'dashboard.php'), 'Compte avec identifiants de démonstration refusé');
+    $response = app_request('/app/setup.php');
+    check_app($response['status'] === 200 && str_contains($response['body'], 'Première configuration'), 'Configuration initiale accessible en local');
+    $setupToken = app_token($response);
+    $response = app_request('/app/setup.php', ['username' => 'first_admin', 'email' => 'first-admin@test.invalid',
+        'password' => 'StrongAdminPassword!2026', 'password_confirmation' => 'StrongAdminPassword!2026', 'csrf_token' => $setupToken]);
+    check_app($response['status'] === 200 && str_contains($response['url'], 'mfa-enroll.php'), 'Création du premier administrateur impose MFA');
+    if (!preg_match('/<code>([A-Z2-7]{32})<\/code>/', $response['body'], $secretMatch)) {
+        throw new RuntimeException('Clé TOTP absente du parcours de configuration.');
+    }
+    require_once $root . '/app/AdminTotp.php';
+    $adminMfaCode = AdminTotp::codeAt($secretMatch[1]);
+    $response = app_request('/app/mfa-enroll.php', ['csrf_token' => app_token($response), 'totp_code' => $adminMfaCode]);
+    check_app($response['status'] === 200 && str_contains($response['url'], 'dashboard.php'), 'Activation TOTP ouvre la session administrateur');
+    $storedMfa = $db->query("SELECT encrypted_secret FROM admin_mfa WHERE user_id = (SELECT id FROM users WHERE username = 'first_admin')")->fetch_assoc();
+    check_app(is_array($storedMfa) && str_starts_with($storedMfa['encrypted_secret'], 'v1.') && !str_contains($storedMfa['encrypted_secret'], $secretMatch[1]),
+        'Secret TOTP chiffré au repos');
+    check_app((int) $db->query("SELECT COUNT(*) FROM users WHERE username IN ('cybershield_admin','cybershield_client') AND active = 0")->fetch_row()[0] === 2,
+        'Configuration initiale désactive les anciens comptes partagés');
+    $response = app_request('/app/logout.php');
+    app_request('/app/logout.php', ['csrf_token' => app_token($response)]);
+    $response = app_request('/app/login.php');
+    $response = app_request('/app/login.php', ['username' => 'first_admin', 'password' => 'StrongAdminPassword!2026',
+        'totp_code' => AdminTotp::codeAt($secretMatch[1]), 'csrf_token' => app_token($response)]);
+    check_app($response['status'] === 200 && str_contains($response['url'], 'dashboard.php'), 'Connexion administrateur vérifie le code TOTP');
     echo "$checks controles applicatifs reussis.\n";
 } catch (Throwable $e) {
     fwrite(STDERR, 'ECHEC : ' . $e->getMessage() . "\n");

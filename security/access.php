@@ -87,6 +87,7 @@ function console_sidebar(string $active): void
         <nav aria-label="Navigation principale">
             <a class="<?= $active === 'dashboard' ? 'active' : '' ?>" <?= $active === 'dashboard' ? 'aria-current="page"' : '' ?> href="dashboard.php"><span class="nav-symbol">▦</span> Vue d’ensemble</a>
             <a class="<?= $active === 'lab' ? 'active' : '' ?>" <?= $active === 'lab' ? 'aria-current="page"' : '' ?> href="lab.php"><span class="nav-symbol">⌁</span> Laboratoire</a>
+            <a class="<?= $active === 'ip-rules' ? 'active' : '' ?>" <?= $active === 'ip-rules' ? 'aria-current="page"' : '' ?> href="ip-rules.php"><span class="nav-symbol">⊘</span> Accès par IP</a>
             <a href="../app/search.php"><span class="nav-symbol">▤</span> Boutique de démonstration</a>
             <a href="../index.php"><span class="nav-symbol">↗</span> Accueil du projet</a>
         </nav>

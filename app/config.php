@@ -26,12 +26,10 @@ if (empty($_SESSION['csrf_token'])) {
     $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
 }
 
-if (!defined('CYBERSHIELD_SKIP_REQUEST')) {
-    require_once __DIR__ . '/../security/middleware.php';
-    cybershield_protect();
-}
+require_once __DIR__ . '/../security/bootstrap.php';
 
 require_once __DIR__ . '/SecureDataGateway.php';
+require_once __DIR__ . '/DatabasePassword.php';
 if (!extension_loaded('mysqli')) {
     http_response_code(503);
     exit('Extension mysqli absente. Utilisez le PHP de Wamp.');
@@ -41,14 +39,14 @@ try {
     $conn = new mysqli(
         getenv('DB_HOST') ?: 'localhost',
         getenv('DB_USER') ?: 'root',
-        getenv('DB_PASSWORD') ?: '',
+        cybershield_database_password(),
         getenv('DB_NAME') ?: 'projet_sqli_vulnerable',
         (int) (getenv('DB_PORT') ?: 3306)
     );
     $conn->set_charset('utf8mb4');
     $conn_logs = $conn;
     $gateway = new SecureDataGateway($conn);
-} catch (mysqli_sql_exception $e) {
+} catch (Throwable $e) {
     error_log('CyberShield: connexion à la base indisponible (code ' . $e->getCode() . ').');
     http_response_code(503);
     exit('Base de démonstration indisponible. Vérifiez MySQL et importez database/schema.sql puis database/seed_products.sql.');
@@ -77,7 +75,7 @@ function validate_csrf_token(): void {
 function execute_query_secure(string $sql, array $params = []) {
     try {
         return getDataGateway()->execute($sql, $params);
-    } catch (mysqli_sql_exception $e) {
+} catch (Throwable $e) {
         error_log('CyberShield: opération de base refusée (code ' . $e->getCode() . ').');
         return false;
     }
@@ -86,6 +84,19 @@ function execute_query_secure(string $sql, array $params = []) {
 function log_user_action(int $userId, string $action): void {
     execute_query_secure('INSERT INTO user_logs (user_id, action, ip_address) VALUES (?, ?, ?)',
         [$userId, $action, $_SERVER['REMOTE_ADDR'] ?? '']);
+}
+
+function establish_user_session(array $user): void {
+    session_regenerate_id(true);
+    $_SESSION['user_id'] = (int) $user['id'];
+    $_SESSION['username'] = (string) $user['username'];
+    $_SESSION['email'] = (string) $user['email'];
+    $_SESSION['role'] = (string) $user['role'];
+    $_SESSION['login_time'] = time();
+    $_SESSION['logged_in'] = true;
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+    unset($_SESSION['pending_admin_mfa_id'], $_SESSION['pending_admin_mfa_started'], $_SESSION['pending_admin_mfa_secret']);
+    log_user_action((int) $user['id'], 'Connexion réussie avec second facteur');
 }
 
 function current_user(): ?array {

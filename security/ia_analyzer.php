@@ -8,8 +8,11 @@ class AIAnalyzer
     {
         $this->config = $config ?? require __DIR__ . '/../config/ai.php';
         $parts = parse_url($this->config['url']);
+        $allowedHosts = ['127.0.0.1', 'localhost', '[::1]'];
+        // In Compose, only the private-network service alias is accepted.
+        if (getenv('CYBERSHIELD_CONTAINERIZED') === '1') { $allowedHosts[] = 'ai'; }
         if (!$parts || ($parts['scheme'] ?? '') !== 'http' ||
-            !in_array($parts['host'] ?? '', ['127.0.0.1', 'localhost', '[::1]'], true) ||
+            !in_array($parts['host'] ?? '', $allowedHosts, true) ||
             isset($parts['user']) || isset($parts['pass']) || isset($parts['query']) || isset($parts['fragment'])) {
             throw new InvalidArgumentException('Le service IA doit utiliser une adresse HTTP locale.');
         }

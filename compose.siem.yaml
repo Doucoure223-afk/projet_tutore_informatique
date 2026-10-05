@@ -1,0 +1,29 @@
+services:
+  siem-forwarder:
+    build:
+      context: .
+      dockerfile: docker/siem/Dockerfile
+    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    user: "33:33"
+    environment:
+      CYBERSHIELD_SIEM_URL: ${CYBERSHIELD_SIEM_URL:-}
+      CYBERSHIELD_SIEM_TOKEN_FILE: /run/secrets/siem_token
+      CYBERSHIELD_SIEM_ALLOW_HTTP: "0"
+      CYBERSHIELD_SIEM_OUTBOX: /var/lib/cybershield/logs/siem-outbox
+    secrets:
+      - siem_token
+    volumes:
+      - siem-outbox:/var/lib/cybershield/logs/siem-outbox
+    networks:
+      - siem-egress
+
+secrets:
+  siem_token:
+    file: ./secrets/siem_token.txt

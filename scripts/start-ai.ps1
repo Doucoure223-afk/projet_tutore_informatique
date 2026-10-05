@@ -12,18 +12,26 @@ try {
         if ($LASTEXITCODE -ne 0) { throw 'Installation des dépendances IA échouée.' }
     }
     $model = Join-Path $root 'ia/models/model.joblib'
-    if (-not (Test-Path -LiteralPath $model)) {
-        Write-Host 'Entraînement initial du MLP sur le corpus synthétique local…'
+    $expectedModelVersion = 'cybershield-mlp-httpparams-v2'
+    $modelVersion = ''
+    if (Test-Path -LiteralPath $model) {
+        $modelVersion = & $python (Join-Path $root 'ia/check_model.py') $model
+        if ($LASTEXITCODE -ne 0) { $modelVersion = '' }
+    }
+    if ($modelVersion -ne $expectedModelVersion) {
+        & (Join-Path $PSScriptRoot 'stop-ai.ps1')
+        Write-Host 'Entraînement du MLP sur le partage public local versionné…'
         & $python ia/train.py
         if ($LASTEXITCODE -ne 0) { throw 'Entraînement du MLP échoué.' }
     }
     try {
         $health = Invoke-RestMethod -Uri 'http://127.0.0.1:5000/health' -TimeoutSec 2
-        if ($health.model_loaded -and $health.analysis_method -eq 'MLP') {
+        if ($health.model_loaded -and $health.model_version -eq $expectedModelVersion -and $health.rate_limit -eq 420) {
             Write-Host "Le modèle $($health.model_version) est déjà actif sur 127.0.0.1:5000."
             return
         }
     } catch { }
+    & (Join-Path $PSScriptRoot 'stop-ai.ps1')
     $logDir = Join-Path $env:TEMP 'cybershield-ai'
     New-Item -ItemType Directory -Force -Path $logDir | Out-Null
     $process = Start-Process -FilePath $python -ArgumentList 'ia/service.py' -WorkingDirectory $root `
@@ -33,7 +41,7 @@ try {
         Start-Sleep -Milliseconds 250
         try {
             $health = Invoke-RestMethod -Uri 'http://127.0.0.1:5000/health' -TimeoutSec 2
-            if ($health.model_loaded -and $health.analysis_method -eq 'MLP') {
+            if ($health.model_loaded -and $health.model_version -eq $expectedModelVersion -and $health.rate_limit -eq 420) {
                 Write-Host "CyberShield MLP actif (PID $($process.Id), version $($health.model_version))."
                 return
             }

@@ -1,7 +1,11 @@
 <?php
 require_once __DIR__ . '/config.php';
+require_once __DIR__ . '/AdminTotp.php';
+require_once __DIR__ . '/LoginThrottle.php';
 $error = '';
 $success = isset($_GET['registered']) ? 'Compte créé. Vous pouvez vous connecter.' : '';
+if (isset($_GET['mfa_expired'])) { $success = 'La configuration MFA a expiré. Reconnectez-vous pour recommencer.'; }
+if (isset($_GET['mfa_already_set'])) { $success = 'Le second facteur est déjà actif. Saisissez votre code pour vous connecter.'; }
 $redirect = input_text($_POST, 'redirect', input_text($_GET, 'redirect'));
 $target = $redirect === 'paiement' ? 'paiement.php' : 'dashboard.php';
 if (($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'POST' && current_user()) {
@@ -12,6 +16,18 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
     validate_csrf_token();
     $username = trim(input_text($_POST, 'username'));
     $password = input_text($_POST, 'password');
+    $clientIp = (string) ($_SERVER['REMOTE_ADDR'] ?? 'unknown');
+    $loginThrottle = null;
+    $attemptAllowed = false;
+    try {
+        $loginThrottle = new LoginThrottle(rtrim(getenv('CYBERSHIELD_LOG_DIR') ?: __DIR__ . '/../logs', '/\\'));
+        $attemptAllowed = $loginThrottle->beginAttempt($username, $clientIp);
+    } catch (Throwable $exception) {
+        $error = 'Connexion indisponible. Réessayez dans quelques instants.';
+    }
+    if (!$attemptAllowed) {
+        if ($error === '') { $error = 'Trop de tentatives. Réessayez dans 15 minutes.'; }
+    } else {
     $result = execute_query_secure('SELECT id, username, email, role, password FROM users WHERE username = ? AND active = 1 LIMIT 1', [$username]);
     $user = $result ? $result->fetch_assoc() : null;
     $valid = false;
@@ -19,25 +35,56 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
         $stored = (string) $user['password'];
         $isHash = password_get_info($stored)['algo'] !== null;
         $valid = $isHash ? password_verify($password, $stored) : hash_equals($stored, $password);
+        $isLegacyDemo = ($user['username'] === 'cybershield_admin' && $user['email'] === 'admin@cybershield.test')
+            || ($user['username'] === 'cybershield_client' && $user['email'] === 'client@cybershield.test');
+        if ($isLegacyDemo) {
+            $valid = false;
+        }
     }
     if ($valid) {
         if (!$isHash && password_get_info($stored)['algo'] === null) {
             $replacement = password_hash($password, PASSWORD_DEFAULT);
             execute_query_secure('UPDATE users SET password = ? WHERE id = ?', [$replacement, (int) $user['id']]);
         }
-        session_regenerate_id(true);
-        $_SESSION['user_id'] = (int) $user['id'];
-        $_SESSION['username'] = $user['username'];
-        $_SESSION['email'] = $user['email'];
-        $_SESSION['role'] = $user['role'];
-        $_SESSION['login_time'] = time();
-        $_SESSION['logged_in'] = true;
-        $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
-        log_user_action((int) $user['id'], 'Connexion réussie');
-        header('Location: ' . $target);
-        exit;
+        if (strtolower((string) $user['role']) === 'admin') {
+            try {
+                $mfa = execute_query_secure('SELECT encrypted_secret FROM admin_mfa WHERE user_id = ? LIMIT 1', [(int) $user['id']]);
+                if (!$mfa) {
+                    throw new RuntimeException('Schéma MFA indisponible.');
+                }
+                $mfaRecord = $mfa->fetch_assoc();
+                if (!$mfaRecord) {
+                    $_SESSION['pending_admin_mfa_id'] = (int) $user['id'];
+                    $_SESSION['pending_admin_mfa_started'] = time();
+                    unset($_SESSION['pending_admin_mfa_secret']);
+                    $loginThrottle->clear($username, $clientIp);
+                    header('Location: mfa-enroll.php', true, 303);
+                    exit;
+                }
+                $secret = AdminTotp::decrypt((string) $mfaRecord['encrypted_secret']);
+                if (!AdminTotp::verify($secret, input_text($_POST, 'totp_code'))) {
+                    throw new RuntimeException('Code de vérification incorrect.');
+                }
+            } catch (Throwable $exception) {
+                $error = $exception instanceof RuntimeException && $exception->getMessage() === 'Code de vérification incorrect.'
+                    ? 'Identifiants ou code de vérification incorrects.'
+                    : 'Connexion administrateur indisponible. Vérifiez la configuration MFA et réessayez.';
+            }
+            if ($error === '') {
+                $loginThrottle->clear($username, $clientIp);
+                establish_user_session($user);
+                header('Location: ' . $target);
+                exit;
+            }
+        } else {
+            $loginThrottle->clear($username, $clientIp);
+            establish_user_session($user);
+            header('Location: ' . $target);
+            exit;
+        }
     }
     $error = 'Identifiants incorrects ou compte inactif.';
+    }
 }
 ?>
 <!DOCTYPE html>
@@ -49,7 +96,6 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
     <script>(function(){var t=localStorage.getItem('theme');if(t==='light'||t==='dark')document.documentElement.setAttribute('data-theme',t);})();</script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="style_login.css">
-    <link rel="stylesheet" href="theme.css">
 </head>
 <body>
     <div class="container">
@@ -93,6 +139,11 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
                            placeholder="Entrez votre mot de passe"
                            required>
                 </div>
+                <div class="form-group">
+                    <label for="totp_code">Code d’authentification</label>
+                    <input type="text" id="totp_code" name="totp_code" inputmode="numeric" autocomplete="one-time-code"
+                           pattern="[0-9]{6}" maxlength="6" placeholder="Requis pour un administrateur">
+                </div>
                 <input type="submit" name="Envoyer" class="submit-btn" value="Se connecter">
             </form>
             
@@ -100,6 +151,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
                 <a href="search.php">Recherche</a>
                 <a href="panier.php">Panier</a>
                 <a href="inscription.php">Créer un compte</a>
+                <a href="setup.php">Première installation</a>
             </div>
         </div>
     </div>

@@ -18,6 +18,15 @@ CREATE TABLE IF NOT EXISTS users (
   UNIQUE KEY email (email)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- Secrets TOTP chiffrés pour les comptes administrateurs.
+CREATE TABLE IF NOT EXISTS admin_mfa (
+  user_id INT NOT NULL,
+  encrypted_secret VARCHAR(255) NOT NULL,
+  enabled_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (user_id),
+  CONSTRAINT fk_admin_mfa_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS products (
   id INT NOT NULL AUTO_INCREMENT,
   name VARCHAR(100) NOT NULL,

@@ -1,0 +1,15 @@
+[Tue Feb 10 11:22:49.348179 2026] [php:error] [pid 14916:tid 7564] [client ::1:52830] script 'C:/wamp64/www/accueilClient.php.php' not found or unable to stat
+[Tue Feb 10 11:23:24.667177 2026] [php:error] [pid 14916:tid 7564] [client ::1:57179] script 'C:/wamp64/www/accueilClient.php' not found or unable to stat
+[Tue Feb 10 11:25:24.576473 2026] [php:error] [pid 14916:tid 7564] [client ::1:64594] script 'C:/wamp64/www/acceil.php' not found or unable to stat
+[Tue Feb 10 11:25:51.016788 2026] [php:error] [pid 14916:tid 6256] [client ::1:58164] script 'C:/wamp64/www/acceil.php' not found or unable to stat
+[Mon Feb 16 20:52:54.395915 2026] [core:error] [pid 6280:tid 9032] (20025)The given path contained wildcard characters: [client ::1:62962] AH00036: access to /tp_php/cookies/index.php* failed (filesystem path 'C:/wamp64/www/tp_php/cookies/index.php*')
+[Wed Feb 18 12:45:50.858886 2026] [php:error] [pid 11720:tid 9020] [client ::1:60201] script 'C:/wamp64/www/projet_tutor\xc3\xa9_info/app/panier.php' not found or unable to stat, referer: http://localhost/projet_tutor%C3%A9_info/app/login.php
+[Sun Mar 01 00:14:14.763576 2026] [php:error] [pid 24172:tid 1424] [client ::1:58637] script 'C:/wamp64/www/mon-projet-security/login.php' not found or unable to stat
+[Mon Mar 02 12:44:40.421767 2026] [php:error] [pid 16060:tid 9024] [client ::1:56309] script 'C:/wamp64/www/projet_tutor\xc3\xa9_inf/view.php' not found or unable to stat
+[Mon Mar 02 12:45:00.731074 2026] [php:error] [pid 16060:tid 9024] [client ::1:59388] script 'C:/wamp64/www/projet_tutor\xc3\xa9_inf/view.php' not found or unable to stat
+[Tue Mar 17 08:06:50.399998 2026] [php:error] [pid 6608:tid 8384] [client ::1:54645] script 'C:/wamp64/www/projet_tutor\xc3\xa9_inf/view.php' not found or unable to stat, referer: http://localhost/projet_tutor\xc3\xa9_inf/view.php
+[Tue Mar 17 08:07:08.364109 2026] [php:error] [pid 6608:tid 8384] [client ::1:55866] script 'C:/wamp64/www/projet_tutor\xc3\xa9_inf/login.php' not found or unable to stat, referer: http://localhost/projet_tutor\xc3\xa9_inf/login.php
+[Tue Mar 17 14:16:45.851174 2026] [php:error] [pid 25384:tid 9036] [client ::1:55348] script 'C:/wamp64/www/projet_tutor\xc3\xa9_inf/view.php' not found or unable to stat, referer: http://localhost/projet_tutor\xc3\xa9_inf/view.php
+[Tue Mar 17 14:17:26.830642 2026] [php:error] [pid 25384:tid 9028] [client ::1:55522] script 'C:/wamp64/www/projet_tutor\xc3\xa9_inf/login.php' not found or unable to stat, referer: http://localhost/projet_tutor\xc3\xa9_inf/login.php
+[Tue Mar 17 14:17:59.928300 2026] [php:error] [pid 25384:tid 9036] [client ::1:55664] script 'C:/wamp64/www/projet_tutor\xc3\xa9_inf/view.php' not found or unable to stat
+[Mon Oct 05 20:22:27.092549 2026] [php:error] [pid 18024:tid 9052] [client ::1:52695] script 'C:/wamp64/www/projet_tutor\xc3\xa9_inf/login.php' not found or unable to stat

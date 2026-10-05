@@ -1,0 +1,5 @@
+# Ne pas committer la clé API
+.env
+*.pyc
+__pycache__/
+model.joblib

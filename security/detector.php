@@ -51,7 +51,7 @@ class SQLInjectionDetector
         }
         $wouldBlock = $score >= $this->blockThreshold;
         $needsAi = !$wouldBlock && $score >= $this->reviewThreshold;
-        $sensitive = preg_match('/pass|pwd|token|secret|cookie|authorization|card|carte|cvv|cvc|csrf/i', (string) $paramName);
+        $sensitive = preg_match('/pass|pwd|token|secret|cookie|authorization|card|carte|cvv|cvc|csrf|totp|otp|one[_-]?time|verification[_-]?code/i', (string) $paramName);
         return [
             'block' => $this->blockMode && $wouldBlock,
             'would_block' => $wouldBlock,

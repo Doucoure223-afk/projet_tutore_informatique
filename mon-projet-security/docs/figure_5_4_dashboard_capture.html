@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Figure 5.4 — Dashboard de supervision (capture)</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root, [data-theme="dark"] {
+            --primary: #2563eb;
+            --danger: #dc2626;
+            --warning: #f59e0b;
+            --success: #10b981;
+            --border: #334155;
+            --bg-page: #0f172a;
+            --bg-sidebar: rgba(15, 23, 42, 0.95);
+            --bg-card: rgba(30, 41, 59, 0.7);
+            --text-primary: #f8fafc;
+            --text-muted: #94a3b8;
+            --nav-hover: rgba(37, 99, 235, 0.2);
+            --nav-hover-text: #93c5fd;
+            --shadow-card: 0 10px 30px rgba(37, 99, 235, 0.2);
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Inter', sans-serif; background: var(--bg-page); color: var(--text-primary); min-height: 100vh; }
+        .dashboard { display: grid; grid-template-columns: 250px 1fr; min-height: 100vh; }
+        .sidebar {
+            background: var(--bg-sidebar); border-right: 1px solid var(--border); padding: 24px;
+            display: flex; flex-direction: column;
+        }
+        .main-content { padding: 24px; overflow-y: auto; }
+        .nav-item {
+            display: flex; align-items: center; gap: 10px; padding: 12px 16px; border-radius: 12px;
+            color: var(--text-primary); text-decoration: none; margin-bottom: 4px;
+        }
+        .nav-item.active { background: var(--nav-hover); color: var(--nav-hover-text); }
+        .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 24px; }
+        .stat-card {
+            background: var(--bg-card); border-radius: 16px; padding: 20px; border: 1px solid var(--border);
+        }
+        .stat-value { font-size: 1.75rem; font-weight: 800; }
+        .chart-container {
+            background: var(--bg-card); border-radius: 16px; padding: 24px; margin: 24px 0; border: 1px solid var(--border);
+        }
+        .attack-log {
+            background: rgba(220, 38, 38, 0.1); border-left: 4px solid var(--danger);
+            padding: 16px; margin: 8px 0; border-radius: 8px;
+        }
+        .attack-log small { color: var(--text-muted); font-size: 0.875rem; }
+        .llm-analysis-box {
+            margin-top: 20px; padding: 20px; border-radius: 12px;
+            background: rgba(37, 99, 235, 0.12); border: 1px solid var(--primary);
+        }
+        .llm-analysis-box h3 { margin-bottom: 12px; color: var(--primary); font-size: 1rem; display: flex; align-items: center; gap: 8px; }
+        .llm-analysis-box p { font-size: 0.9rem; line-height: 1.6; color: var(--text-primary); white-space: pre-line; }
+        .chat-panel {
+            position: fixed; top: 0; right: 0; width: 380px; height: 100vh;
+            background: var(--bg-sidebar); border-left: 1px solid var(--border); box-shadow: -8px 0 24px rgba(0,0,0,0.2);
+            display: flex; flex-direction: column; z-index: 1000;
+        }
+        .chat-panel-header {
+            padding: 16px 20px; border-bottom: 1px solid var(--border);
+            display: flex; align-items: center; justify-content: space-between;
+        }
+        .chat-panel-title { font-size: 1.1rem; font-weight: 600; }
+        .chat-messages { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+        .chat-msg { max-width: 90%; padding: 10px 14px; border-radius: 12px; font-size: 0.9rem; line-height: 1.45; }
+        .chat-msg.user { align-self: flex-end; background: var(--primary); color: #fff; }
+        .chat-msg.assistant { align-self: flex-start; background: var(--bg-card); border: 1px solid var(--border); white-space: pre-line; }
+        .btn { padding: 10px 18px; border-radius: 10px; font-weight: 600; font-size: 0.9rem; border: none; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; text-decoration: none; color: inherit; }
+        .btn-primary { background: var(--primary); color: #fff; }
+        .realtime-indicator { color: var(--primary); font-size: 0.875rem; margin-top: auto; padding-top: 20px; border-top: 1px solid var(--border); }
+    </style>
+</head>
+<body>
+    <div class="dashboard">
+        <aside class="sidebar">
+            <div style="margin-bottom: 32px;">
+                <h1 style="font-size: 1.5rem; margin-bottom: 8px;"><i class="fas fa-shield-alt"></i> Security 2026</h1>
+                <div style="font-size: 0.875rem; opacity: 0.7;">v2026.2 • Online</div>
+            </div>
+            <nav>
+                <a href="#" class="nav-item active"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
+                <a href="#" class="nav-item"><i class="fas fa-history"></i> Historique</a>
+                <a href="#" class="nav-item"><i class="fas fa-chart-area"></i> Activité</a>
+                <a href="#" class="nav-item"><i class="fas fa-robot"></i> Intelligence IA</a>
+                <a href="#" class="nav-item"><i class="fas fa-list"></i> Liste IP</a>
+                <a href="#" class="nav-item"><i class="fas fa-search"></i> Recherche</a>
+                <a href="#" class="nav-item"><i class="fas fa-info-circle"></i> À propos</a>
+                <a href="#" class="nav-item"><i class="fas fa-sign-out-alt"></i> Déconnexion</a>
+            </nav>
+            <div class="realtime-indicator"><i class="fas fa-circle" style="font-size: 0.5rem; vertical-align: middle;"></i> Temps réel activé</div>
+            <div style="font-size: 0.875rem; margin-top: 10px; color: var(--text-muted);">Dernière mise à jour: 21/02/2026 14:32</div>
+        </aside>
+
+        <main class="main-content">
+            <header style="margin-bottom: 28px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
+                    <h1 style="font-size: 2rem; font-weight: 800;">Dashboard de Sécurité</h1>
+                    <div style="display: flex; gap: 12px;">
+                        <button type="button" class="btn btn-primary"><i class="fas fa-sync"></i> Actualiser</button>
+                        <a href="#" class="btn" style="background: var(--border); color: var(--text-primary);"><i class="fas fa-download"></i> Exporter CSV</a>
+                        <a href="#" class="btn" style="background: var(--border); color: var(--text-primary);"><i class="fas fa-file-pdf"></i> Rapport PDF</a>
+                    </div>
+                </div>
+                <p style="opacity: 0.7; margin-top: 8px;">Surveillance en temps réel des menaces SQL Injection</p>
+                <div style="margin-top: 16px; display: flex; gap: 8px;">
+                    <a href="#" style="padding: 8px 16px; border-radius: 8px; text-decoration: none; font-size: 0.9rem; background: rgba(148,163,184,0.2); color: var(--text-primary);">24 h</a>
+                    <a href="#" style="padding: 8px 16px; border-radius: 8px; text-decoration: none; font-size: 0.9rem; background: var(--primary); color: #fff;">7 jours</a>
+                    <a href="#" style="padding: 8px 16px; border-radius: 8px; text-decoration: none; font-size: 0.9rem; background: rgba(148,163,184,0.2); color: var(--text-primary);">30 jours</a>
+                </div>
+            </header>
+
+            <section class="stat-grid">
+                <div class="stat-card">
+                    <div style="font-size: 0.875rem; opacity: 0.7;">Attaques (7 jours)</div>
+                    <div class="stat-value" style="color: var(--danger);">12</div>
+                </div>
+                <div class="stat-card">
+                    <div style="font-size: 0.875rem; opacity: 0.7;">Taux de blocage</div>
+                    <div class="stat-value" style="color: var(--success);">100%</div>
+                </div>
+                <div class="stat-card">
+                    <div style="font-size: 0.875rem; opacity: 0.7;">Temps réponse IA</div>
+                    <div class="stat-value" style="color: var(--primary);">42 ms</div>
+                </div>
+                <div class="stat-card">
+                    <div style="font-size: 0.875rem; opacity: 0.7;">Précision IA</div>
+                    <div class="stat-value" style="color: var(--warning);">99.6%</div>
+                </div>
+            </section>
+
+            <section id="section-attacks" class="chart-container">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 20px;">
+                    <h2 style="font-size: 1.5rem;"><i class="fas fa-exclamation-triangle"></i> Dernières attaques</h2>
+                    <a href="#" style="color: var(--primary); text-decoration: none; font-weight: 500;">Voir tout <i class="fas fa-arrow-right"></i></a>
+                </div>
+
+                <div class="attack-log">
+                    <strong>SQL_INJECTION</strong> · Il y a 2 min<br>
+                    <small>IP: 192.168.1.105 · <i class="fas fa-map-marker-alt" style="margin-right: 4px;"></i>France · SELECT * FROM article WHERE id=123...</small>
+                    <div class="ai-risk-factors" style="margin-top: 6px; font-size: 0.85em; opacity: 0.9;">
+                        <span style="color: var(--primary);"><i class="fas fa-robot" style="margin-right: 4px;"></i>Facteurs IA:</span> sql_keywords · keyword_density
+                    </div>
+                </div>
+
+                <div class="llm-analysis-box">
+                    <h3><i class="fas fa-robot"></i> Analyse par l'assistant LLM (Gemini)</h3>
+                    <p>Cette requête a été classée comme risque élevé en raison de la présence du terme "SELECT" et d’un ratio de mots-clés SQL élevé. Contexte probable : <strong>contenu légitime</strong> (ex. article de blog sur le SQL, champ de recherche technique). Faux positif identifié.
+
+Recommandation : ajuster les poids du modèle pour les endpoints à caractère éditorial ou ajouter une liste d’exclusion (ex. /blog/, /docs/). L’administrateur peut réentraîner le modèle après export des vrais négatifs (export_payloads_for_ml.py) pour réduire ce type de FP.</p>
+                </div>
+            </section>
+
+            <section class="chart-container" style="margin-top: 24px;">
+                <h2 style="margin-bottom: 16px; font-size: 1.25rem;"><i class="fas fa-robot"></i> Insights IA</h2>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px;">
+                    <div style="padding: 12px 16px; background: rgba(16, 185, 129, 0.1); border-radius: 10px; border: 1px solid var(--border);">
+                        <span style="font-size: 0.8rem; opacity: 0.8;">Confiance moyenne IA (24 h)</span>
+                        <div style="font-weight: 700; font-size: 1.25rem;">0.92</div>
+                    </div>
+                    <div style="padding: 12px 16px; background: rgba(245, 158, 11, 0.1); border-radius: 10px; border: 1px solid var(--border);">
+                        <span style="font-size: 0.8rem; opacity: 0.8;">Blocages 7 j (WAF / IA)</span>
+                        <div style="font-weight: 700; font-size: 1.1rem;">WAF: 8 · IA: 4</div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Panneau chat ouvert (comme sur votre dashboard) -->
+    <aside class="chat-panel">
+        <div class="chat-panel-header">
+            <span class="chat-panel-title"><i class="fas fa-robot"></i> Assistant</span>
+            <div style="display: flex; gap: 8px;">
+                <button type="button" style="padding: 6px 12px; font-size: 0.85rem; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-card); color: var(--text-primary); cursor: pointer;"><i class="fas fa-plus"></i> Nouveau chat</button>
+                <button type="button" style="width: 36px; height: 36px; border-radius: 8px; border: none; background: var(--bg-card); color: var(--text-primary); cursor: pointer;"><i class="fas fa-times"></i></button>
+            </div>
+        </div>
+        <div class="chat-messages">
+            <div class="chat-msg user">Pourquoi cette requête a été bloquée ?</div>
+            <div class="chat-msg assistant">La requête contient les mots-clés SQL "SELECT" et "FROM", ce qui a déclenché un score de risque élevé. Dans ce cas, le payload ressemble à du contenu technique légitime (ex. extrait d’article sur le SQL) plutôt qu’à une injection. Je recommande d’ajuster les poids pour les champs à caractère éditorial ou d’exclure certains endpoints du scoring strict.</div>
+        </div>
+        <div style="padding: 16px; border-top: 1px solid var(--border); font-size: 0.8rem; color: var(--text-muted);">
+            <i class="fas fa-history"></i> Historique des conversations
+        </div>
+        <div style="padding: 8px 16px; display: flex; gap: 8px; flex-wrap: wrap;">
+            <button type="button" style="padding: 6px 12px; border-radius: 8px; font-size: 0.8rem; background: var(--bg-card); border: 1px solid var(--border); color: var(--text-primary); cursor: pointer;">Résumé 24h</button>
+            <button type="button" style="padding: 6px 12px; border-radius: 8px; font-size: 0.8rem; background: var(--bg-card); border: 1px solid var(--border); color: var(--text-primary); cursor: pointer;">WAF vs IA</button>
+            <button type="button" style="padding: 6px 12px; border-radius: 8px; font-size: 0.8rem; background: var(--bg-card); border: 1px solid var(--border); color: var(--text-primary); cursor: pointer;">Recommandations</button>
+        </div>
+        <div style="padding: 16px; border-top: 1px solid var(--border); display: flex; gap: 10px; align-items: flex-end;">
+            <textarea placeholder="Votre question…" rows="1" style="flex:1; min-height: 44px; padding: 10px 14px; border-radius: 10px; border: 1px solid var(--border); background: var(--bg-card); color: var(--text-primary); font-family: inherit; font-size: 0.9rem;"></textarea>
+            <button type="button" style="width: 44px; height: 44px; border-radius: 10px; border: none; background: var(--primary); color: #fff; cursor: pointer;"><i class="fas fa-paper-plane"></i></button>
+        </div>
+    </aside>
+</body>
+</html>

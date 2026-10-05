@@ -2,7 +2,7 @@
 require_once __DIR__ . '/detector.php';
 require_once __DIR__ . '/ia_analyzer.php';
 
-/** Deterministic first pass, real MLP in the gray zone, strict fail-safe on errors. */
+/** Immediate signatures first, bounded MLP pre-screen, strict fail-safe on errors. */
 class HybridAnalyzer
 {
     private SQLInjectionDetector $detector;
@@ -16,7 +16,7 @@ class HybridAnalyzer
         $this->ai = $ai ?? new AIAnalyzer();
     }
 
-    public function analyze(string $input, string $parameter = '', string $context = 'search', bool $allowAi = true): array
+    public function analyze(string $input, string $parameter = '', string $context = 'search', bool $allowAi = true, bool $preScreen = false): array
     {
         $start = microtime(true);
         $result = $this->detector->analyzeWithScore($input, $parameter, $context);
@@ -25,7 +25,10 @@ class HybridAnalyzer
             'attack_type' => $result['patterns'][0] ?? 'NONE', 'reason' => 'Aucun indice SQLi significatif.'];
         $block = $result['would_block'];
         if ($block) { $result['reason'] = 'Une signature SQLi explicite dépasse le seuil de blocage.'; }
-        if ($result['needs_ai']) {
+        // Broaden model coverage to the first few request values even when
+        // no PHP signature matched. Middleware bounds these calls per request.
+        if ($result['needs_ai'] || ($preScreen && !$block)) {
+            $result['needs_ai'] = true;
             try {
                 if (!$allowAi) { throw new RuntimeException('Budget IA de la requête atteint.'); }
                 $prediction = $this->ai->analyze($input, $context);

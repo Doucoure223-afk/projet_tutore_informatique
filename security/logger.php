@@ -6,6 +6,7 @@ class SecurityLogger
     private $accessFile;
     private $iaLogFile;
     private $errorLogFile;
+    private $siemOutbox;
     private $requestId;
     private $loggedRequests = [];
 
@@ -19,6 +20,7 @@ class SecurityLogger
         $this->accessFile = $directory . '/access.jsonl';
         $this->iaLogFile = $directory . '/ia_analysis.jsonl';
         $this->errorLogFile = $directory . '/errors.jsonl';
+        $this->siemOutbox = $directory . '/siem-outbox';
         $this->requestId = bin2hex(random_bytes(16));
     }
 
@@ -39,7 +41,7 @@ class SecurityLogger
         $rawPayload = is_scalar($event['payload'] ?? null) ? (string) $event['payload'] : '';
         // Never retain even an unsalted digest of credentials or payment data.
         // Such digests can be recovered by guessing common passwords or tokens.
-        $sensitivePayload = preg_match('/pass(?:word)?|passwd|pwd|token|secret|authorization|cookie|session|csrf|card|carte|cvv|cvc|\bpin\b|\bpan\b|iban|api[_-]?key/i', $parameter) === 1;
+        $sensitivePayload = preg_match('/pass(?:word)?|passwd|pwd|token|secret|authorization|cookie|session|csrf|card|carte|cvv|cvc|\bpin\b|\bpan\b|iban|api[_-]?key|totp|otp|one[_-]?time|verification[_-]?code/i', $parameter) === 1;
         $timestamp = isset($event['timestamp']) ? strtotime((string) $event['timestamp']) : false;
         $path = (string) ($event['path'] ?? ($_SERVER['REQUEST_URI'] ?? ''));
         // Query strings and fragments may contain passwords or tokens.
@@ -68,8 +70,53 @@ class SecurityLogger
             'model_version' => $this->clean($event['model_version'] ?? '', 100),
         ];
         $this->writeJson($this->logFile, $entry);
+        $siemUrl = getenv('CYBERSHIELD_SIEM_URL');
+        if (is_string($siemUrl) && trim($siemUrl) !== '' &&
+            ($action !== 'ALLOWED' || $entry['score'] >= 30 || ($entry['risk'] ?? 0) >= 0.75)) {
+            try { $this->enqueueSiem($entry); }
+            catch (Throwable $error) { error_log('CyberShield : file SIEM saturée ou indisponible; événement conservé localement.'); }
+        }
         $this->loggedRequests[$requestId] = $entry;
         return $entry;
+    }
+
+    /** Queue only alerts and review-worthy events; the HTTP request never waits for the SIEM. */
+    private function enqueueSiem(array $entry): void
+    {
+        if (!is_dir($this->siemOutbox) && !mkdir($this->siemOutbox, 0700, true) && !is_dir($this->siemOutbox)) {
+            throw new RuntimeException('File SIEM indisponible.');
+        }
+        $queued = 0;
+        foreach (new DirectoryIterator($this->siemOutbox) as $file) {
+            if ($file->isFile() && preg_match('/^[a-f0-9]{64}\.json$/D', $file->getFilename())) {
+                $queued++;
+                if ($queued >= 10000) { throw new RuntimeException('File SIEM pleine.'); }
+            }
+        }
+        $requestId = (string) ($entry['request_id'] ?? $entry['id'] ?? '');
+        $target = $this->siemOutbox . '/' . hash('sha256', $requestId) . '.json';
+        if (is_file($target)) { return; }
+        $json = json_encode($entry, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_INVALID_UTF8_SUBSTITUTE);
+        if ($json === false) { throw new RuntimeException('Événement SIEM non sérialisable.'); }
+        $temporary = tempnam($this->siemOutbox, '.pending-');
+        if ($temporary === false) { throw new RuntimeException('Fichier temporaire SIEM indisponible.'); }
+        @chmod($temporary, 0600);
+        try {
+            $handle = @fopen($temporary, 'wb');
+            if (!$handle) { throw new RuntimeException('Fichier temporaire SIEM non inscriptible.'); }
+            try {
+                $offset = 0;
+                while ($offset < strlen($json)) {
+                    $written = fwrite($handle, substr($json, $offset));
+                    if ($written === false || $written === 0) { throw new RuntimeException('Écriture SIEM incomplète.'); }
+                    $offset += $written;
+                }
+                if (!fflush($handle)) { throw new RuntimeException('Vidage de la file SIEM impossible.'); }
+            } finally { fclose($handle); }
+            if (!@rename($temporary, $target)) { throw new RuntimeException('Publication de l’événement SIEM impossible.'); }
+        } finally {
+            if (is_file($temporary)) { @unlink($temporary); }
+        }
     }
 
     private function clean($value, $limit = 1024)
@@ -82,7 +129,7 @@ class SecurityLogger
 
     public function redact($value, $key = '', $depth = 0)
     {
-        if (preg_match('/pass(?:word)?|passwd|pwd|token|secret|authorization|cookie|session|csrf|card|carte|cvv|cvc|\bpin\b|\bpan\b|iban|api[_-]?key/i', (string) $key)) {
+        if (preg_match('/pass(?:word)?|passwd|pwd|token|secret|authorization|cookie|session|csrf|card|carte|cvv|cvc|\bpin\b|\bpan\b|iban|api[_-]?key|totp|otp|one[_-]?time|verification[_-]?code/i', (string) $key)) {
             return '[REDACTED]';
         }
         if ($depth > 8) {
@@ -97,7 +144,7 @@ class SecurityLogger
         }
         $text = $this->clean($value);
         $text = preg_replace('/\b(authorization|cookie|set-cookie)\s*:\s*[^\r\n]*/i', '$1: [REDACTED]', $text);
-        $text = preg_replace('~\b(password|passwd|pwd|token|secret|csrf_token|api[_-]?key|cvv|cvc|card_number)["\x27]?\s*([:=])\s*(?:"[^"]*"|\x27[^\x27]*\x27|[^&\s,;]+)~i', '$1$2[REDACTED]', $text);
+        $text = preg_replace('~\b(password|passwd|pwd|token|secret|csrf_token|api[_-]?key|cvv|cvc|card_number|totp(?:[_-]?code)?|otp(?:[_-]?code)?|one[_-]?time[_-]?(?:code|password)|verification[_-]?code)["\x27]?\s*([:=])\s*(?:"[^"]*"|\x27[^\x27]*\x27|[^&\s,;]+)~i', '$1$2[REDACTED]', $text);
         $text = preg_replace('/\b(?:\d[ -]?){13,19}\b/', '[REDACTED_CARD]', $text);
         return $text;
     }
@@ -299,6 +346,20 @@ class SecurityLogger
         $csv = stream_get_contents($stream);
         fclose($stream);
         return $csv;
+    }
+
+    /** JSON Lines export for SIEM ingestion; each line is one filtered event. */
+    public function exportJsonLines(array $filters = []): string
+    {
+        $lines = [];
+        foreach ($this->getEvents($filters, 0) as $event) {
+            $line = json_encode($event, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_INVALID_UTF8_SUBSTITUTE);
+            if ($line === false) {
+                throw new RuntimeException('Événement de sécurité non sérialisable.');
+            }
+            $lines[] = $line;
+        }
+        return $lines ? implode("\n", $lines) . "\n" : '';
     }
 
     // Legacy adapters kept for older demonstration pages.

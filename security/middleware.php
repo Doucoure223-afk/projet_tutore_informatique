@@ -2,6 +2,7 @@
 require_once __DIR__ . '/hybrid_analyzer.php';
 require_once __DIR__ . '/logger.php';
 require_once __DIR__ . '/response_handler.php';
+require_once __DIR__ . '/ip_access.php';
 
 function cybershield_rate_allowed(array $config, string $ip): bool
 {
@@ -53,6 +54,11 @@ function cybershield_flatten_inputs(array $values, string $prefix, array &$flat,
     }
 }
 
+function cybershield_is_sensitive_parameter(string $parameter): bool
+{
+    return preg_match('/pass(?:word)?|passwd|pwd|token|secret|authorization|cookie|session|csrf|card|carte|cvv|cvc|totp|otp|one[_-]?time|verification[_-]?code|phpsessid|\bpin\b|\bpan\b|iban|api[_-]?key/i', $parameter) === 1;
+}
+
 function cybershield_protect(): void
 {
     $config = require __DIR__ . '/../config/security.php';
@@ -67,7 +73,16 @@ function cybershield_protect(): void
     header('Referrer-Policy: same-origin');
     try {
         $logger = new SecurityLogger(rtrim($config['log_dir'], '/\\') . '/events.jsonl');
-        if (!cybershield_rate_allowed($config, $_SERVER['REMOTE_ADDR'] ?? 'unknown')) {
+        $clientIp = (string) ($_SERVER['REMOTE_ADDR'] ?? 'unknown');
+        $ipAccess = new IpAccessControl($config['log_dir']);
+        if ($ipAccess->isBlocked($clientIp)) {
+            $event = array_merge($event, [
+                'action' => 'BLOCKED',
+                'attack_type' => 'IP_ACCESS_RULE',
+                'source' => 'ip_policy',
+                'reason' => 'Adresse IP inscrite sur la liste de blocage.',
+            ]);
+        } elseif (!cybershield_rate_allowed($config, $clientIp)) {
             $status = 429;
             header('Retry-After: 60');
             $event = array_merge($event, ['action' => 'BLOCKED', 'attack_type' => 'RATE_LIMIT', 'reason' => 'Limite de requêtes atteinte.']);
@@ -98,7 +113,11 @@ function cybershield_protect(): void
             $analyzer = new HybridAnalyzer();
             $aiCalls = 0;
             foreach ($inputs as $parameter => $payload) {
-                $analysis = $analyzer->analyze($payload, $parameter, $context, $aiCalls < $config['max_ai_calls']);
+                // Credentials, session identifiers, payment data and one-time codes
+                // must never leave PHP for model inference or enter event payloads.
+                if (cybershield_is_sensitive_parameter((string) $parameter)) { continue; }
+                $withinAiBudget = $aiCalls < $config['max_ai_calls'];
+                $analysis = $analyzer->analyze($payload, $parameter, $context, $withinAiBudget, $withinAiBudget);
                 if ($analysis['needs_ai']) { $aiCalls++; }
                 if ($analysis['score'] > $event['score'] || $analysis['would_block']) {
                     $event = array_merge($event, $analysis, ['parameter' => $parameter, 'context' => $context,

@@ -21,21 +21,30 @@ if (isset($_GET['export']) && $_GET['export'] === 'csv') {
     echo "\xEF\xBB\xBF", $logger->exportCsv($filters);
     exit;
 }
+if (isset($_GET['export']) && $_GET['export'] === 'jsonl') {
+    header('Content-Type: application/x-ndjson; charset=utf-8');
+    header('Content-Disposition: attachment; filename="cybershield-incidents.jsonl"');
+    header('X-Content-Type-Options: nosniff');
+    echo $logger->exportJsonLines($filters);
+    exit;
+}
 $events = $logger->getEvents($filters, 100);
 $maxBars = 1;
 foreach ($daily as $day) { $maxBars = max($maxBars, $day['total']); }
 $healthReady = !empty($health['model_loaded']);
+$monitorMode = !(bool) (require __DIR__ . '/../config/security.php')['block_mode'];
 $types = array_keys($stats['by_type']);
 ?>
 <!doctype html>
 <html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="theme-color" content="#0a1018"><title>Supervision · CyberShield AI</title><link rel="stylesheet" href="console.css"></head>
+<meta name="theme-color" content="#f1efe8"><title>Supervision · CyberShield AI</title><link rel="stylesheet" href="console.css"></head>
 <body><div class="shell">
 <?php console_sidebar('dashboard'); ?>
 <main class="main">
   <div class="topline"><div class="headline"><p class="eyebrow">SUPERVISION · 7 DERNIERS JOURS</p><h1>Protection en temps réel</h1><p class="muted">Décisions du middleware et incidents enregistrés par CyberShield AI.</p></div>
-    <span class="badge <?= $healthReady ? 'ok' : 'warn' ?>"><span class="dot"></span> MLP <?= $healthReady ? 'opérationnel' : 'indisponible' ?></span></div>
-  <?php if (!$healthReady): ?><div class="callout warn">Le service IA ou son modèle n’est pas disponible. Les cas ambigus sont bloqués par précaution. Lancez l’installation, l’entraînement et le service local depuis le guide du projet.</div><?php endif; ?>
+    <div class="actions"><span class="badge <?= $monitorMode ? 'warn' : 'ok' ?>"><span class="dot"></span><?= $monitorMode ? 'Observation' : 'Blocage SQLi' ?></span><span class="badge <?= $healthReady ? 'ok' : 'warn' ?>"><span class="dot"></span> MLP <?= $healthReady ? 'opérationnel' : 'indisponible' ?></span></div></div>
+  <?php if ($monitorMode): ?><div class="callout warn mode-notice"><strong>Mode observation actif.</strong> Les décisions SQLi sont enregistrées sans bloquer la requête. Les règles d’accès IP, la limite de débit et les limites de taille restent appliquées.</div><?php endif; ?>
+  <?php if (!$healthReady): ?><div class="callout warn">Le service IA ou son modèle n’est pas disponible. <?= $monitorMode ? 'En mode observation, les alertes SQLi restent consignées sans bloquer les requêtes.' : 'En mode blocage, les cas ambigus sont bloqués par précaution.' ?> Lancez l’installation, l’entraînement et le service local depuis le guide du projet.</div><?php endif; ?>
   <?php if (($health['dataset_source'] ?? '') === 'synthetic_demo'): ?><p class="muted" style="font-size:11px;margin:9px 0">Modèle <?= console_escape($health['model_version'] ?? '') ?> · corpus synthétique de démonstration</p><?php endif; ?>
   <section class="stats" aria-label="Indicateurs de sécurité">
     <div class="stat"><div class="stat-label">Requêtes analysées</div><div class="stat-value"><?= (int) $stats['total'] ?></div><div class="stat-foot">sur les 7 derniers jours</div></div>
@@ -55,7 +64,7 @@ $types = array_keys($stats['by_type']);
       <div class="callout">Les indicateurs décrivent les événements conservés localement. Les résultats d’entraînement ne représentent pas le trafic réel.</div>
     </section>
   </div>
-  <section class="card"><div class="card-head"><div><h2>Journal des incidents</h2><p class="sub">Jusqu’à 100 décisions finales, avec explication et source.</p></div><a class="button secondary" href="dashboard.php?<?= http_build_query(array_filter($filters, static fn($v) => $v !== '')) ?>&amp;export=csv">↓ Exporter en CSV</a></div>
+  <section class="card"><div class="card-head"><div><h2>Journal des incidents</h2><p class="sub">Jusqu’à 100 décisions finales, avec explication et source.</p></div><div class="actions"><a class="button secondary" href="dashboard.php?<?= http_build_query(array_filter($filters, static fn($v) => $v !== '')) ?>&amp;export=csv">↓ Exporter en CSV</a><a class="button secondary" href="dashboard.php?<?= http_build_query(array_filter($filters, static fn($v) => $v !== '')) ?>&amp;export=jsonl">↓ JSONL / SIEM</a></div></div>
     <form class="filters" method="get" action="dashboard.php">
       <label class="sr-only" for="f-action">Décision</label><select id="f-action" name="action"><option value="">Toutes les décisions</option><?php foreach (['BLOCKED'=>'Bloquée','BLOCKED_BY_AI'=>'Bloquée par IA','ALLOWED'=>'Autorisée','MONITORED'=>'Observée'] as $value=>$label): ?><option value="<?= $value ?>" <?= $filters['action']===$value?'selected':'' ?>><?= $label ?></option><?php endforeach; ?></select>
       <label class="sr-only" for="f-type">Type</label><select id="f-type" name="type"><option value="">Tous les types</option><?php foreach($types as $type): ?><option <?= $filters['type']===$type?'selected':'' ?> value="<?=console_escape($type)?>"><?=console_escape($type)?></option><?php endforeach; ?></select>
@@ -68,6 +77,7 @@ $types = array_keys($stats['by_type']);
     <?php foreach($events as $event): $explanation = console_explanation($event); $action = (string)($event['action'] ?? 'ALLOWED'); ?>
       <article class="event"><div class="event-top"><span class="pill <?=console_action_class($action)?>"><?=console_escape(console_action_label($action))?></span><strong><?=console_escape($event['attack_type'] ?? 'NONE')?></strong><span class="event-meta"><?=console_escape(date('d/m/Y H:i:s', strtotime($event['timestamp'])))?> · <?=console_escape($event['ip'])?> · <?=console_escape($event['method'])?> <?=console_escape($event['path'])?></span></div>
         <p class="event-detail">Risque heuristique <?= (int)($event['score']??0) ?>/100 · source <?=console_escape($event['source']??'heuristic')?><?php if(isset($event['risk'])): ?> · score MLP <?=number_format((float)$event['risk']*100,1,',',' ')?> %<?php endif; ?><?php if(!empty($event['model_version'])): ?> · <?=console_escape($event['model_version'])?><?php endif; ?> · <?=console_escape($event['latency_ms']??0)?> ms</p>
+        <p class="event-detail">Référence : <code><?=console_escape($event['id']??'')?></code></p>
         <p class="event-detail"><?=console_escape($event['reason']??'')?></p><div class="explanation"><strong><?=console_escape($explanation['label'])?></strong><div><?=console_escape($explanation['what'])?></div><div><?=console_escape($explanation['advice'])?></div></div></article>
     <?php endforeach; ?><?php endif; ?>
   </section>

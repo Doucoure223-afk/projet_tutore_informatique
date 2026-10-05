@@ -16,14 +16,3 @@ FROM (
   UNION ALL SELECT 'Chargeur Sans Fil', 'Charge rapide 15W', 'Accessoires', 45.00, 100
 ) AS seed
 WHERE NOT EXISTS (SELECT 1 FROM products WHERE products.name = seed.name);
-
--- Comptes fictifs du laboratoire local, mots de passe hachés avec bcrypt :
--- cybershield_admin / CyberShieldDemo!2026
--- cybershield_client / DemoClient!2026
-INSERT INTO users (username, password, email, role)
-SELECT 'cybershield_admin', '$2y$12$aHIuiYQmGh2dqBn8EPe/HepimOWeodYAGlo9mzuOPn7.mkP5/WM4W', 'admin@cybershield.test', 'admin'
-WHERE NOT EXISTS (SELECT 1 FROM users WHERE username = 'cybershield_admin' OR email = 'admin@cybershield.test');
-
-INSERT INTO users (username, password, email, role)
-SELECT 'cybershield_client', '$2y$12$eA9CLyw.JMOIsw0a90FWZuKK6n2rtpuxake134hpqp4YBdopqX4qS', 'client@cybershield.test', 'user'
-WHERE NOT EXISTS (SELECT 1 FROM users WHERE username = 'cybershield_client' OR email = 'client@cybershield.test');

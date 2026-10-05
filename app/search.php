@@ -16,7 +16,6 @@ unset($_SESSION['cart_notice']);
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Recherche de produits</title>
     <link rel="stylesheet" href="style_search.css">
-    <link rel="stylesheet" href="theme.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
