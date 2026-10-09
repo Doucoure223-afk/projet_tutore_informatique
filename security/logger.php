@@ -253,10 +253,13 @@ class SecurityLogger
     }
 
     /** Newest first. limit=0 returns all matching events, including for exports. */
-    public function getEvents(array $filters = [], $limit = 100)
+    public function getEvents(array $filters = [], $limit = 100, $offset = 0)
     {
+        $limit = max(0, (int) $limit);
+        $offset = max(0, (int) $offset);
         $events = array_reverse($this->readEvents($this->logFile));
         $filtered = [];
+        $skipped = 0;
         foreach ($events as $event) {
             if (!isset($event['action'], $event['attack_type'], $event['ip'], $event['timestamp'])) {
                 continue;
@@ -269,6 +272,10 @@ class SecurityLogger
             if (!empty($filters['from']) && $day < substr($filters['from'], 0, 10)) { continue; }
             if (!empty($filters['to']) && $day > substr($filters['to'], 0, 10)) { continue; }
             if (!empty($filters['search']) && stripos(json_encode($event, JSON_UNESCAPED_UNICODE), (string) $filters['search']) === false) { continue; }
+            if ($skipped < $offset) {
+                $skipped++;
+                continue;
+            }
             $filtered[] = $event;
             if ($limit > 0 && count($filtered) >= $limit) { break; }
         }

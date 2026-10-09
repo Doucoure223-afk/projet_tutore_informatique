@@ -9,7 +9,7 @@ header('Cache-Control: no-store');
 $health = console_health();
 $localOnly = in_array($_SERVER['REMOTE_ADDR'] ?? '', ['127.0.0.1','::1','::ffff:127.0.0.1'], true);
 ?><!doctype html>
-<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#f1efe8"><title>CyberShield AI · Analyse des requêtes SQL</title><link rel="stylesheet" href="security/console.css"></head>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#f1efe8"><title>CyberShield AI · Analyse des requêtes SQL</title><link rel="stylesheet" href="security/console.css?v=<?= (int) filemtime(__DIR__ . '/security/console.css') ?>"></head>
 <body><main class="home">
   <a class="brand" href="index.php"><span class="brand-mark">C<span>◆</span></span><span>CyberShield <b>AI</b><small>PROTECTION SQLi · DÉMONSTRATION LOCALE</small></span></a>
   <section class="home-hero"><p class="eyebrow">ÉCOLE NATIONALE D’INGÉNIEURS · BAMAKO</p><h1>Repérer les injections.<br><span style="color:var(--mint)">Comprendre la décision.</span></h1><p class="muted intro">CyberShield AI analyse les requêtes SQL par règles, examine localement certains cas ambigus avec un MLP et protège la base grâce aux requêtes préparées.</p></section>

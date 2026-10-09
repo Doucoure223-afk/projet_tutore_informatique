@@ -124,6 +124,9 @@ try {
     check_app($registered !== null && $registered['role'] === 'user' && password_verify('NewPassword!2026', $registered['password']), 'Inscription hache le mot de passe et refuse auto-admin');
     $response = app_request('/app/login.php', ['username' => 'registered_test', 'password' => 'NewPassword!2026', 'csrf_token' => $token]);
     check_app(str_contains($response['url'], 'dashboard.php'), 'Connexion avec mot de passe hache');
+    $response = app_request('/app/login.php?redirect=console');
+    check_app(str_contains($response['url'], '/security/dashboard.php') && $response['status'] === 200,
+        'Connexion depuis la console retourne à la supervision demandée');
     check_app(app_request('/app/dashboard.php?admin_search=test')['status'] === 403, 'Recherche admin refusee au client');
     $response = app_request('/app/paiement.php');
     $token = app_token($response);

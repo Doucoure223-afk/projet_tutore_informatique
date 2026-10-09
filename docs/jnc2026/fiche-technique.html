@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CyberShield AI — Fiche technique JNC 2026</title>
+<style>
+@page{size:A4;margin:0}*{box-sizing:border-box}html,body{margin:0;padding:0;color:#26312f;background:#e8e5de;font:9.5pt/1.38 Arial,"Aptos",sans-serif;-webkit-print-color-adjust:exact;print-color-adjust:exact}.page{position:relative;width:210mm;height:297mm;margin:10mm auto;padding:18mm 19mm 20mm;overflow:hidden;background:#f7f6f1;box-shadow:0 2mm 8mm #29302d22;break-after:page;page-break-after:always}.page:last-child{break-after:auto;page-break-after:auto}.topline{display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #d8d8cf;padding-bottom:3mm;margin-bottom:8mm;color:#53615d;font-size:8pt;letter-spacing:.12em;text-transform:uppercase}.brand{font-weight:700;color:#245c4b;letter-spacing:.16em}.kicker,.label{color:#286451;font-size:8pt;font-weight:700;letter-spacing:.14em;text-transform:uppercase}.kicker{margin:0 0 3mm}h1,h2{font-family:Georgia,"Times New Roman",serif;letter-spacing:-.035em;font-weight:600;color:#1e2926}h1{font-size:38pt;line-height:1.04;margin:0 0 6mm}h2{font-size:24pt;line-height:1.1;margin:0 0 5mm}h3{font-size:12pt;margin:0 0 2mm;color:#26332f}p{margin:0 0 3mm}.lead{font-size:12pt;line-height:1.48;color:#52615d}.small{font-size:8pt;color:#596660}.note{font-size:7.5pt;color:#64706b}.rule{height:1.2mm;width:24mm;background:#28705b;margin:7mm 0}.tag{display:inline-block;border:1px solid #b6c9bb;padding:1.2mm 2.5mm;margin:1mm 1mm 1mm 0;color:#285e4d;background:#ebf0eb;font-size:7.5pt}.callout{border-left:1.1mm solid #bd7b3e;background:#efe9dc;padding:4mm 5mm;margin:4mm 0;color:#564b3c}.green{border-color:#286451;background:#e8eee9;color:#33463c}.cols{display:grid;grid-template-columns:1fr 1fr;gap:7mm}.thirds{display:grid;grid-template-columns:repeat(3,1fr);gap:4mm}.stat{border-top:1px solid #c6cec5;padding-top:3mm}.stat b{display:block;font:600 21pt Georgia,serif;color:#245c4b}.stat span{font-size:8pt;color:#5c6761}.table{width:100%;border-collapse:collapse;margin:3mm 0 4mm;font-size:8.3pt}.table th{text-align:left;background:#25483d;color:#f8f7f1;font-size:7.6pt;font-weight:700;padding:2.5mm}.table td{vertical-align:top;border-bottom:1px solid #d9d9d1;padding:2.4mm}.table tr:nth-child(even) td{background:#f0efe8}.flow{display:grid;grid-template-columns:repeat(5,1fr);gap:2mm;margin:4mm 0 6mm}.flow div{background:#e9eee8;border-top:1mm solid #286451;padding:3mm;font-size:7.5pt;min-height:25mm}.flow b{display:block;color:#245c4b;margin-bottom:1mm}.foot{position:absolute;bottom:10mm;left:19mm;right:19mm;display:flex;justify-content:space-between;border-top:1px solid #d8d8cf;padding-top:2.5mm;color:#718079;font-size:7pt}.cover{display:flex;flex-direction:column}.cover .topline{margin-bottom:auto}.cover-body{margin-top:25mm}.cover h1{font-size:46pt;max-width:150mm}.cover .lead{max-width:148mm}.cover-meta{margin-top:auto;border-top:1px solid #cdd0c7;padding-top:6mm}.cover-meta p{margin:0}.section-space{margin-top:6mm}@media print{html,body{background:#fff}.page{margin:0;box-shadow:none}}
+</style></head><body>
+<section class="page cover">
+ <div class="topline"><span class="brand">CyberShield AI</span><span>Fiche technique · JNC Mali · 2026</span></div>
+ <div class="cover-body"><p class="kicker">École Nationale d’Ingénieurs Abderhamane Baba Touré · Bamako</p><h1>Fiche technique</h1><div class="rule"></div><p class="lead">Un middleware local PHP et un MLP local pour repérer les tentatives d’injection SQL, avec un mode d’observation et une console de revue.</p>
+  <p style="margin-top:8mm"><span class="tag">MVP local</span><span class="tag">SQLi uniquement</span><span class="tag">Inférence locale</span></p>
+  <div class="callout green" style="margin-top:12mm"><b>Stade de validation</b><br>Démonstrateur local. Aucun pilote client, audit externe, test d’intrusion indépendant ou résultat de performance en charge n’est revendiqué.</div>
+ </div>
+ <div class="cover-meta"><p class="label">Équipe indiquée dans le dossier source</p><p>Sékou Doucouré, porteur<br>Adama Nakoun Fané, collaborateur<br><span class="small">Noms, rôles et consentement à confirmer avant soumission.</span></p></div>
+ <div class="foot"><span>Fiche technique · Version révisée pour le concours</span><span>01 / 03</span></div>
+</section>
+
+<section class="page">
+ <div class="topline"><span class="brand">CyberShield AI</span><span>01 · Fonctionnement</span></div>
+ <p class="kicker">Périmètre et architecture</p><h2>Détection SQLi dans un environnement PHP.</h2>
+ <p class="lead">Le logiciel examine les entrées d’une requête avant leur traitement, combine règles heuristiques et MLP local, puis journalise une décision expurgée dans une console administrateur.</p>
+ <div class="flow"><div><b>Entrée</b>Requête HTTP et limites d’entrée</div><div><b>Règles PHP</b>Normalisation et signatures SQLi</div><div><b>MLP local</b>Analyse bornée des valeurs candidates</div><div><b>Décision</b>Observation ou blocage selon la politique</div><div><b>Console</b>Événement et explication locale</div></div>
+ <table class="table"><thead><tr><th>Élément</th><th>Implémentation du dépôt</th></tr></thead><tbody>
+ <tr><td>Filtre applicatif</td><td>PHP 8.4, Apache; moteur heuristique et middleware d’entrée.</td></tr>
+ <tr><td>Classifieur</td><td>MLP scikit-learn v2, 37 caractéristiques, architecture 37→128→64→32→1, seuil fixe 0,75. Le score n’est pas une probabilité calibrée.</td></tr>
+ <tr><td>Services IA</td><td>MLP via Python 3.13, Flask et Waitress; assistant facultatif LangGraph/Ollama local, sans mémoire ni outil d'action. Les réponses du LLM ne sont pas évaluées.</td></tr>
+ <tr><td>Base de démonstration</td><td>MariaDB, accès `mysqli` paramétrés dans la boutique fictive.</td></tr>
+ <tr><td>Journalisation</td><td>JSONL expurgé, sans conserver les valeurs brutes des paramètres; métadonnées réseau et de route toujours à protéger.</td></tr>
+ <tr><td>Déploiement</td><td>Docker Compose local ou Wamp; le port web est publié sur la boucle locale par défaut dans Compose.</td></tr>
+ </tbody></table>
+ <div class="cols section-space"><div><h3>Fonctions présentes</h3><p>Console de supervision; laboratoire qui n’exécute pas le SQL; MFA administrateur; protections CSRF et limites de débit/taille; mode observation; export SIEM facultatif; assistant LangGraph/Ollama local en lecture seule, désactivé par défaut.</p></div><div><h3>Hors périmètre et limites</h3><p>Pas de détection XSS, LFI ou audit de mots de passe, ni de couverture OWASP complète. Le LLM n'influence aucune décision, n'exécute aucune action et peut se tromper; sa qualité reste à évaluer.</p></div></div>
+ <div class="callout"><b>Défense en profondeur</b><br>Conserver les requêtes préparées et les contrôles applicatifs. CyberShield AI ne constitue pas une preuve qu’une entrée est sûre et ne remplace pas la correction d’une requête vulnérable.</div>
+ <p class="note">Le mode observation concerne les décisions SQLi. Les contrôles opérationnels d’accès IP, de débit et de taille continuent de s’appliquer.</p>
+ <div class="foot"><span>Fiche technique · Logiciel actuellement présent dans le dépôt</span><span>02 / 03</span></div>
+</section>
+
+<section class="page">
+ <div class="topline"><span class="brand">CyberShield AI</span><span>02 · Résultats et limites</span></div>
+ <p class="kicker">Mesures reproductibles</p><h2>Benchmarks publics, interprétés avec prudence.</h2>
+ <table class="table"><thead><tr><th>Évaluation</th><th>Résultats</th><th>Portée</th></tr></thead><tbody>
+ <tr><td><b>HttpParamsDataset · split de test</b><br>10 051 valeurs `norm`/`sqli`; entraînement sur un split distinct de la même famille.</td><td>F1 <b>0,999170</b><br>Précision 0,999723<br>Rappel 0,998618<br>TN 6 433 / FP 1<br>FN 5 / TP 3 612</td><td>Test en domaine public; aucune garantie de performance sur trafic client.</td></tr>
+ <tr><td><b>SR-BH 2020 · MLP seul</b><br>775 506 lignes SQLi ou strictement normales sur un honeypot WordPress pendant 12 jours.</td><td>F1 <b>0,862153</b><br>Précision 0,865160<br>Rappel 0,859167<br>Spécificité 0,936180</td><td>Capture unique. Environ 6,4 % de faux positifs parmi les normales de ce corpus.</td></tr>
+ <tr><td><b>SR-BH 2020 · rejeu hybride</b><br>Simulation de la politique middleware sur la même capture.</td><td>F1 <b>0,860560</b><br>Précision 0,865092<br>Rappel 0,856075<br>Spécificité 0,936372</td><td>Mesure de développement; présélection décidée après examen de la capture. Pas de mesure de latence HTTP.</td></tr>
+ </tbody></table>
+ <div class="thirds"><div class="stat"><b>20 105</b><span>exemples d’entraînement `norm`/`sqli`</span></div><div class="stat"><b>1</b><span>honeypot représenté dans SR-BH</span></div><div class="stat"><b>0</b><span>pilote client documenté</span></div></div>
+ <div class="callout"><b>Les anciens chiffres ne sont pas confirmés</b><br>Le jeu de 10 000 requêtes, le F1 0,988, les faux positifs à 0,5 %, les faux négatifs à 0,1 %, les 98 % sous 100 ms et les tests SQLmap/Burp/Apache Benchmark du PDF antérieur ne sont pas étayés par les fichiers présents dans le dépôt.</div>
+ <h3 class="section-space">Prochaines validations</h3><p>Conduire un pilote autorisé sur une copie d’application, en mode observation. Utiliser des sondes contrôlées non destructives, un échantillon de revue aveugle étiqueté avec preuve indépendante, des critères acceptés avant le test et un rapport approuvé par l’hôte.</p>
+ <p>Mesurer les faux positifs, le rappel sur les sondes contrôlées, la latence de bout en bout p50/p95, le taux d’erreurs et la consommation sur une machine identifiée. Commander ensuite une revue de sécurité indépendante sur un environnement isolé.</p>
+ <p class="small section-space">Sources : `ia/README.md`; `ia/models/training_report.json`; `ia/models/external_evaluation.json`; `ia/models/honeypot_evaluation.json`; HttpParamsDataset (licence MIT incluse); SR-BH 2020 (CC0 1.0, DOI 10.7910/DVN/OGOIXX). La spécificité et les résultats varient avec la source et ne sont pas des garanties de production.</p>
+ <div class="foot"><span>Fiche technique · Résultats publics et prochaine étape</span><span>03 / 03</span></div>
+</section>
+</body></html>

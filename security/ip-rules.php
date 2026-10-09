@@ -54,7 +54,7 @@ $currentIp = (string) ($_SERVER['REMOTE_ADDR'] ?? 'indisponible');
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#f1efe8">
   <title>Accès par IP · CyberShield AI</title>
-  <link rel="stylesheet" href="console.css">
+  <link rel="stylesheet" href="console.css?v=<?= (int) filemtime(__DIR__ . '/console.css') ?>">
 </head>
 <body>
 <div class="shell">
@@ -94,8 +94,10 @@ $currentIp = (string) ($_SERVER['REMOTE_ADDR'] ?? 'indisponible');
       <aside class="card">
         <div class="card-head"><div><h2>Portée de la règle</h2><p class="sub">Blocage exact, vérifié côté serveur à chaque requête.</p></div></div>
         <p class="event-detail">L’adresse courante de cette session est <strong><?= console_escape($currentIp) ?></strong>. Évitez de la bloquer pendant votre propre session de travail.</p>
-        <p class="event-detail">La console conserve un accès de secours local et reste accessible à un administrateur connecté. Les règles sont enregistrées dans le dossier privé des journaux et chaque refus est ajouté au journal d’incidents.</p>
-        <p class="event-detail">Cette liste n’accepte que des adresses individuelles. Elle ne modifie pas les données de compte ni les listes de règles du pare-feu du système.</p>
+        <details class="policy-details"><summary>Voir les limites et l’accès de secours</summary>
+          <p class="event-detail">La console conserve un accès de secours local et reste accessible à un administrateur connecté. Les règles sont enregistrées dans le dossier privé des journaux et chaque refus est ajouté au journal d’incidents.</p>
+          <p class="event-detail">Cette liste n’accepte que des adresses individuelles. Elle ne modifie pas les données de compte ni les règles du pare-feu du système.</p>
+        </details>
       </aside>
     </div>
 

@@ -1,5 +1,7 @@
 # Service MLP local — CyberShield AI
 
+L'assistant conversationnel LangGraph est une fonction facultative distincte du filtre MLP; son architecture, son installation et ses limites sont décrites dans [ASSISTANT_LANGGRAPH.md](ASSISTANT_LANGGRAPH.md).
+
 Le service exécute un vrai réseau scikit-learn **37 → 128 → 64 → 32 → 1**, avec ReLU, Adam et StandardScaler. Le seuil de blocage du score SQLi reste fixé à **0,75**. Le modèle livré est versionné et son rapport conserve l'empreinte des données utilisées.
 
 ## Installation et exécution

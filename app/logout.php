@@ -20,7 +20,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
 ?>
 <!DOCTYPE html>
 <html lang="fr"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Déconnexion — CyberShield AI</title><link rel="stylesheet" href="style_login.css"></head>
+<title>Déconnexion — CyberShield AI</title><link rel="stylesheet" href="theme.css?v=<?= (int) filemtime(__DIR__ . '/theme.css') ?>"></head>
 <body><main class="container"><div class="form-container">
 <h1>Se déconnecter</h1>
 <p>Votre session et votre panier de démonstration seront fermés.</p>

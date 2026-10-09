@@ -50,17 +50,16 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Achat simulé — CyberShield AI</title>
-    <link rel="stylesheet" href="style_paiement.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="theme.css?v=<?= (int) filemtime(__DIR__ . '/theme.css') ?>">
 </head>
 <body>
     <div class="container">
         <div class="header">
             <p class="user-badge">Connecté en tant que <?php echo htmlspecialchars($username); ?> (<?php echo htmlspecialchars(ucfirst($role)); ?>)</p>
             <nav class="nav-links">
-                <a href="panier.php"><i class="fas fa-arrow-left"></i> Panier</a>
-                <a href="search.php">Recherche</a>
-                <a href="dashboard.php">Dashboard</a>
+                <a href="panier.php"><span aria-hidden="true">←</span> Panier</a>
+                <a href="search.php">Catalogue</a>
+                <a href="dashboard.php">Mon espace</a>
                 <a href="logout.php">Déconnexion</a>
             </nav>
         </div>
@@ -84,15 +83,16 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
         </div>
 
         <?php if ($is_admin): ?>
-        <div class="admin-box">
-            <h3>Privilège administrateur</h3>
-            <p>Testez le parcours administrateur. Cette validation reste une simulation.</p>
-            <form method="POST" action="">
-                <input type="hidden" name="csrf_token" value="<?= escape_output($_SESSION['csrf_token']) ?>">
-                <button type="submit" name="validate_without_pay" class="btn-admin">Simuler la validation administrateur</button>
-            </form>
-        </div>
-        <div class="separator">— ou simuler un paiement —</div>
+        <details class="admin-checkout-option">
+            <summary>Parcours de validation administrateur</summary>
+            <div class="admin-box">
+                <p>Option de démonstration réservée aux administrateurs. Aucune transaction n’est créée.</p>
+                <form method="POST" action="">
+                    <input type="hidden" name="csrf_token" value="<?= escape_output($_SESSION['csrf_token']) ?>">
+                    <button type="submit" name="validate_without_pay" class="btn-admin">Simuler la validation administrateur</button>
+                </form>
+            </div>
+        </details>
         <?php endif; ?>
 
         <div class="payment-card">

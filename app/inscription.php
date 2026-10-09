@@ -34,13 +34,14 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
         <head>
                 <meta charset="UTF-8">
                 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                 <link rel="stylesheet" href="style_login.css">
+                 <link rel="stylesheet" href="theme.css?v=<?= (int) filemtime(__DIR__ . '/theme.css') ?>">
                 <title>Inscription — CyberShield AI</title>
         </head>
         <body>
             <div class="container">   
                         <div class="header">
-                            <h1> <span class="vulnerability-badge">Inscription</span></h1>
+                            <h1><span class="vulnerability-badge">Créer un compte</span></h1>
+                            <p class="subtitle">Un compte permet d’accéder à l’espace de démonstration et au parcours d’achat simulé.</p>
                         </div>
 
                         <div class="form-container">
@@ -49,22 +50,22 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
                                     <input type="hidden" name="csrf_token" value="<?= escape_output($_SESSION['csrf_token']) ?>">
                                     <div class="form-group">
                                         <label for="username">Nom d'utilisateur</label>
-                                        <input type="text" name="username" required placeholder="Votre nom d'utilisateur" id="username" >
+                                        <input type="text" name="username" autocomplete="username" minlength="3" maxlength="50" required placeholder="3 à 50 caractères" id="username">
                                     </div>
 
                                     <div class="form-group">
                                         <label for="password">Mot de passe</label>
-                                        <input type="password" name="password" required placeholder="Mot de passe (8 caractères minimum)" id="password">
+                                        <input type="password" name="password" autocomplete="new-password" minlength="8" maxlength="72" required placeholder="8 caractères minimum" id="password">
                                     </div>
                                     <div  class="form-group">
                                         <label for="email">Adresse mail</label>
-                                        <input type="email" name="mail" required placeholder="Votre mail" id="email" >
+                                        <input type="email" name="mail" autocomplete="email" maxlength="100" required placeholder="nom@exemple.com" id="email">
                                     </div>
 
-                                    <input type="submit" name="Envoyer"class="submit-btn"  value="Envoyer" >  
+                                    <input type="submit" name="Envoyer" class="submit-btn" value="Créer mon compte">
                             </form>
                             <div class="footer">
-                                <p> Vous avez deja un compte ? <a href="login.php">Connectez-vous</a></p>
+                                <p>Vous avez déjà un compte&nbsp;? <a href="login.php">Se connecter</a></p>
                             </div>
                         </div>
                         

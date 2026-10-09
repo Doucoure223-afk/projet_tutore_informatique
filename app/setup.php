@@ -2,14 +2,10 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/config.php';
+require_once __DIR__ . '/LocalSetupAccess.php';
 header('Cache-Control: no-store');
 
-$remoteIp = (string) ($_SERVER['REMOTE_ADDR'] ?? '');
-$packedIp = @inet_pton($remoteIp);
-$isLocal = PHP_SAPI === 'cli'
-    || in_array($remoteIp, ['127.0.0.1', '::1', '::ffff:127.0.0.1'], true)
-    || (is_string($packedIp) && strlen($packedIp) === 4 && ord($packedIp[0]) === 127);
-if (!$isLocal) {
+if (!cybershield_local_setup_allowed($_SERVER)) {
     http_response_code(404);
     exit('Cette page de première configuration est disponible uniquement sur la machine locale.');
 }
@@ -107,7 +103,7 @@ if (!$complete && $error === '' && ($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'PO
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Première configuration · CyberShield AI</title>
-  <link rel="stylesheet" href="style_login.css">
+  <link rel="stylesheet" href="theme.css?v=<?= (int) filemtime(__DIR__ . '/theme.css') ?>">
 </head>
 <body>
   <main class="container">

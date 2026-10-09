@@ -136,6 +136,8 @@ try {
     check(count($daily) === 7 && array_sum(array_column($daily, 'total')) === 6 && $daily[0]['total'] === 0, 'Daily history contains invented data or misses real events');
     check(count($logger->getEvents(['action' => 'BLOCKED_BY_AI'])) === 1, 'Action filter failed');
     check(count($logger->getEvents(['type' => 'COMMENT_INJECTION', 'ip' => '::1'])) === 1, 'Type/IP filter failed');
+    $pagedEvents = $logger->getEvents(['action' => 'BLOCKED'], 2, 1);
+    check(count($pagedEvents) === 2 && $pagedEvents[0]['request_id'] === 'mfa-2b' && $pagedEvents[1]['request_id'] === 'blocked-1', 'Filtered event pagination or newest-first ordering failed');
     check(count($logger->getEvents(['from' => gmdate('Y-m-d'), 'to' => gmdate('Y-m-d')])) === 5, 'Date filter failed');
     check(count($logger->getEvents(['search' => 'COMMENT_INJECTION'])) === 1, 'Search filter failed');
     check(strpos($logger->exportCsv(), "'=HYPERLINK") !== false, 'CSV formula injection not neutralized');

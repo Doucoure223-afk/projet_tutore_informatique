@@ -2,6 +2,7 @@
 .git/**
 .runtime/
 .venv/
+ollama-models/
 __pycache__/
 **/__pycache__/
 **/*.pyc

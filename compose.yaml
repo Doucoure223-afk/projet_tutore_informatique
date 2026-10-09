@@ -46,6 +46,61 @@ services:
       retries: 5
       start_period: 45s
 
+  ollama:
+    image: ollama/ollama:0.40.2
+    profiles: ["assistant"]
+    restart: unless-stopped
+    environment:
+      OLLAMA_HOST: 0.0.0.0:11434
+      OLLAMA_KEEP_ALIVE: 5m
+      OLLAMA_NUM_PARALLEL: "1"
+    volumes:
+      - type: bind
+        source: ${OLLAMA_MODELS_PATH:-./ollama-models}
+        target: /root/.ollama/models
+    networks:
+      - assistant-internal
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+
+  assistant:
+    build:
+      context: .
+      dockerfile: docker/assistant/Dockerfile
+    profiles: ["assistant"]
+    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    user: "10002:10002"
+    environment:
+      OLLAMA_BASE_URL: http://ollama:11434
+      CYBERSHIELD_ASSISTANT_MODEL: ${CYBERSHIELD_ASSISTANT_MODEL:-qwen2.5:7b-instruct}
+      CYBERSHIELD_ASSISTANT_TOKEN_FILE: /run/secrets/assistant_token
+    secrets:
+      - assistant_token
+    expose:
+      - "5100"
+    networks:
+      - assistant-internal
+    depends_on:
+      ollama:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:5100/health', timeout=2)"]
+      interval: 15s
+      timeout: 4s
+      retries: 6
+      start_period: 20s
+
   web:
     build:
       context: .
@@ -75,10 +130,15 @@ services:
       CYBERSHIELD_MODE: ${CYBERSHIELD_MODE:-monitor}
       CYBERSHIELD_LOG_DIR: /var/lib/cybershield/logs
       CYBERSHIELD_AI_URL: http://ai:5000
+      CYBERSHIELD_ASSISTANT_URL: http://assistant:5100
+      CYBERSHIELD_ASSISTANT_TOKEN_FILE: /run/secrets/assistant_token
       CYBERSHIELD_CONTAINERIZED: "1"
+      CYBERSHIELD_DOCKER_SETUP_PEER: ${CYBERSHIELD_DOCKER_SETUP_PEER:-172.19.0.1}
+      CYBERSHIELD_APP_BIND_ADDRESS: ${APP_BIND_ADDRESS:-127.0.0.1}
       CYBERSHIELD_SIEM_URL: ${CYBERSHIELD_SIEM_URL:-}
     secrets:
       - db_password
+      - assistant_token
     ports:
       - "${APP_BIND_ADDRESS:-127.0.0.1}:${APP_PORT:-8080}:80"
     volumes:
@@ -87,6 +147,8 @@ services:
     networks:
       - database
       - inference
+      - assistant-internal
+      - frontend
     depends_on:
       db:
         condition: service_healthy
@@ -109,6 +171,10 @@ networks:
     internal: true
   inference:
     internal: true
+  assistant-internal:
+    internal: true
+  frontend:
+    driver: bridge
   siem-egress:
     driver: bridge
 
@@ -117,3 +183,5 @@ secrets:
     file: ./secrets/db_password.txt
   db_root_password:
     file: ./secrets/db_root_password.txt
+  assistant_token:
+    file: ./docker-secrets/assistant_token.txt

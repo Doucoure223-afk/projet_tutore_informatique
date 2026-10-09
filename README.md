@@ -1,6 +1,10 @@
 # CyberShield AI
 
-MVP local de détection d’injections SQL développé dans le cadre des Journées Nationales de la Cybersécurité, à Bamako. Il combine un moteur heuristique PHP, un modèle MLP local pour les saisies ambiguës, un journal d’incidents structuré et un laboratoire sans exécution SQL.
+MVP local de détection d’injections SQL développé dans le cadre des Journées Nationales de la Cybersécurité, à Bamako. Il combine un moteur heuristique PHP, un modèle MLP local pour les saisies ambiguës, un journal d’incidents structuré et un laboratoire sans exécution SQL. La console propose aussi, en option, un assistant LangGraph/Ollama local, en lecture seule et indépendant du filtre.
+
+Pour le dossier du Concours Innovation JNC 2026, consulter [les pièces révisées et les réponses au formulaire](docs/jnc2026/README.md). Les PDF historiques à la racine contiennent des chiffres et fonctionnalités non confirmés par le dépôt; les pièces V3 indiquent le périmètre et les résultats vérifiables.
+
+Pour préparer une copie isolée par client, lancer `scripts/new-client-deployment.ps1`, puis suivre le [guide de déploiement client et d’intégration PHP](docs/DEPLOIEMENT_CLIENTS_ET_INTEGRATION_PHP.md). Le générateur prépare un paquet Docker propre, un port et un projet Compose dédiés, sans importer secrets ni journaux; les secrets sont créés sur l’hôte du client. Le produit n’est pas un service SaaS multi-tenant et ne modifie pas automatiquement une application tierce ni son SSO.
 
 ## Démarrer avec Docker Desktop
 
@@ -13,7 +17,32 @@ docker compose up --build -d
 
 Ouvrir ensuite `http://127.0.0.1:8080/app/setup.php`, créer l’administrateur et enrôler son MFA. Apache est publié uniquement sur la boucle locale; MariaDB et le MLP n’ont aucun port hôte. Le premier démarrage entraîne l’artefact MLP à partir du jeu versionné inclus. Le mode par défaut est `monitor` pour commencer le pilote; après revue des événements et des entrées légitimes, `CYBERSHIELD_MODE=block` peut être choisi dans `.env`. Le schéma et le seed ne s’exécutent qu’à la création d’un volume de base vide.
 
+Avec Docker Desktop, le transfert de port présente l’adresse de passerelle du réseau au conteneur web. `CYBERSHIELD_DOCKER_SETUP_PEER` (par défaut `172.19.0.1`) autorise uniquement cette adresse pour la première configuration, et seulement quand `APP_BIND_ADDRESS=127.0.0.1`. Si la passerelle change, relever la nouvelle adresse dans le journal Apache et mettre à jour cette variable dans `.env`; ne pas publier l’application sur `0.0.0.0` pour contourner le contrôle.
+
 La base, les journaux, les sessions et la file SIEM utilisent des volumes distincts. La clé MFA se trouve avec les journaux dans `cybershield-runtime`; sauvegarder cette clé et le volume de base ensemble. `docker compose down` conserve les données. `docker compose down -v` les supprime et doit être réservé à une remise à zéro voulue.
+
+### Assistant IA local avec LangGraph (facultatif)
+
+La console d'administration propose un assistant de triage séparé du filtre SQLi. Un graphe LangGraph prépare la question, transmet à Ollama une synthèse assainie puis vérifie la réponse. Le panneau « Poser une question » est accessible directement depuis la supervision, le laboratoire et les règles IP; une page complète reste aussi disponible. Il ne lit pas la base, n'ajoute automatiquement au contexte aucune IP ni payload de journal et ne peut ni modifier une règle ni exécuter de SQL. Le texte saisi est envoyé au modèle local; ne colle pas de secret ni de renseignement personnel. Il ne conserve pas l'historique des échanges; toute recommandation doit être vérifiée par l'administrateur. Le filtre PHP et le MLP continuent de décider indépendamment.
+
+Avec Wamp, installer Ollama et télécharger le modèle avant de lancer l'assistant :
+
+```powershell
+ollama pull qwen2.5:7b-instruct
+powershell -ExecutionPolicy Bypass -File .\scripts\start-assistant.ps1
+```
+
+Une fois connecté à la console administrateur, cliquer sur « Poser une question » dans la supervision, le laboratoire ou la page des règles IP. La page complète est à `http://localhost/projet_tutor%C3%A9_inf/security/assistant.php`. Le modèle plus léger `qwen2.5:1.5b` est aussi accepté : le télécharger puis lancer `powershell -ExecutionPolicy Bypass -File .\scripts\start-assistant.ps1 -Model qwen2.5:1.5b`.
+
+Avec Docker, le modèle se télécharge sur l'hôte; `scripts/init-docker.ps1` configure son cache local dans `.env`. Le service Ollama du conteneur monte ce cache en lecture seule et n'a pas d'accès Internet :
+
+```powershell
+ollama pull qwen2.5:7b-instruct
+powershell -ExecutionPolicy Bypass -File .\scripts\init-docker.ps1
+docker compose --profile assistant up --build -d
+```
+
+Le profil assistant est facultatif et son modèle doit déjà être présent dans le cache hôte. La construction nécessite le téléchargement des images et dépendances épinglées; l'exécution du LLM est locale. Aucun résultat de qualité, latence ou usage réel du LLM n'est revendiqué. Voir [l'architecture, les limites et les tests](ia/ASSISTANT_LANGGRAPH.md). Références : [LangGraph Graph API](https://docs.langchain.com/oss/python/langgraph/graph-api) et [API Chat Ollama](https://docs.ollama.com/api/chat).
 
 ### Transfert vers un SIEM
 
@@ -27,14 +56,14 @@ Seuls les événements bloqués, observés comme SQLi ou à examiner (score heur
 
 ### Mesurer le pilote
 
-Le journal ne conserve pas les requêtes brutes, donc ses seules étiquettes ne peuvent pas révéler les attaques manquées. Construire une feuille d’échantillonnage, vérifier les événements avec une source indépendante ou des essais contrôlés, puis remplir `truth` avec `attack` ou `benign` :
+Le journal ne conserve pas les requêtes brutes. Pour éviter qu'un réviseur soit influencé par le verdict du filtre, l'outil tire un échantillon aléatoire simple et reproductible, et la feuille ne révèle ni décision, ni score, ni type d'attaque. Le réviseur utilise une preuve indépendante, renseigne `truth` (`attack` ou `benign`), `reviewer_code`, `evidence_ref` et `label_confidence` (`low`, `medium`, `high`). Les étiquettes à faible confiance sont exclues des métriques principales jusqu'à leur résolution. `evidence_ref` désigne un dossier ou une ligne de journal autorisé; ne copiez pas de payload ni de donnée personnelle dans le CSV :
 
 ```powershell
-& .\.runtime\python\python.exe scripts\pilot_metrics.py --events logs\events.jsonl --template tmp\pilot-review.csv --limit 250
+& .\.runtime\python\python.exe scripts\pilot_metrics.py --events logs\events.jsonl --template tmp\pilot-review.csv --limit 250 --seed 20261009
 & .\.runtime\python\python.exe scripts\pilot_metrics.py --events logs\events.jsonl --labels tmp\pilot-review.csv --report tmp\pilot-metrics.json
 ```
 
-Le rapport calcule précision, rappel, F1 et matrice de confusion uniquement sur les décisions SQLi étiquetées; il exclut les refus opérationnels tels que limite de débit ou taille de requête. Il ne mesure ni les événements non revus ni les attaques que l’équipe n’a pas indépendamment identifiées. Examiner un mélange de décisions bloquées/observées et d’autorisations, et garder l’évaluation du pilote distincte des scores des corpus publics.
+La première commande crée également `tmp\pilot-review.csv.meta.json`, qui consigne la graine, la taille de la population admissible et le caractère aveugle de la feuille. Le rapport calcule précision, rappel, spécificité, taux de faux positifs, taux de faux négatifs, F1, matrice de confusion et intervalles de Wilson à 95 % sur les événements SQLi étiquetés; il exclut les refus opérationnels comme les limites de débit ou de taille. Le tirage couvre les décisions journalisées seulement : il ne peut pas découvrir seul une attaque qui ne figure dans aucun journal. Mesurer le rappel sur le trafic réel exige donc une source indépendante autorisée ou un jeu de sondes contrôlées sur une copie de test. N'annoncer aucun résultat de pilote avant d'avoir recueilli et vérifié ces étiquettes.
 
 Avec Docker, les journaux restent dans un volume privé. Téléchargez d’abord l’export JSONL depuis la console administrateur (`Journal des incidents` → `JSONL / SIEM`), puis remplacez `logs\events.jsonl` dans les commandes ci-dessus par le chemin du fichier téléchargé.
 
@@ -66,6 +95,9 @@ Les comptes ne sont plus créés avec des mots de passe connus. La première con
 
 # Transfert SIEM et mesure du pilote
 & .\.runtime\python\python.exe -m unittest tests.test_siem_forwarder tests.test_pilot_metrics -v
+
+# Garde-fou d’accès à la première configuration Docker
+& 'C:\wamp64\bin\php\php8.4.15\php.exe' -n tests\setup_access_test.php
 
 # Évaluer le modèle inchangé sur le jeu public indépendant (10 355 lignes)
 & .\.runtime\python\python.exe ia\evaluate_external.py
@@ -122,8 +154,8 @@ Les identifiants, cookies de session, jetons CSRF, données de paiement et codes
 
 Le dossier de référence décrit un jeu validé de 10 000 requêtes et un F1 de 0,988, mais ces fichiers ne sont pas fournis et ces performances ne sont pas revendiquées. Le MLP livré est maintenant entraîné sur le partage d’apprentissage MIT de [HttpParamsDataset](https://github.com/Morzeux/HttpParamsDataset), avec 20 105 valeurs `norm`/`sqli`; les valeurs normales dérivent de CSIC 2010 et les SQLi ont été générées avec sqlmap et d’autres corpus publics. Sur le partage de test séparé, il obtient F1 0,999170. Sur les 775 506 lignes normales ou SQLi de la capture observée [SR-BH 2020](https://dataverse.harvard.edu/dataset.xhtml?persistentId=doi:10.7910/DVN/OGOIXX), le MLP seul obtient F1 0,862153. Le middleware conserve les règles immédiates et envoie désormais les quatre premières valeurs non bloquées au MLP, même si aucune signature n’a correspondu ; le pipeline combiné obtient F1 0,860560 et rappel 0,856075, contre rappel 0,188869 avec l’ancienne présélection par règles seules. La précision de 0,865092 et la spécificité de 0,936372 montrent qu’il reste des faux positifs. La présélection a été choisie après diagnostic sur cette même capture : son score combiné est une mesure de développement, pas une validation indépendante. Ces résultats ne certifient pas une protection autonome en production. Les rapports, matrices de confusion, empreintes et limites sont consignés dans `ia/models/` et `ia/README.md`. Les requêtes préparées restent indispensables.
 
-L’explication dans la console est un guide local déterministe, et non un assistant LLM. Les journaux ne conservent pas les saisies brutes : les valeurs signalées sont empreintées en SHA-256, et les paramètres identifiés comme mots de passe, jetons ou données de paiement sont entièrement masqués. Le filtre en amont complète les requêtes préparées et ne prouve jamais à lui seul qu’une valeur est bénigne.
+L'explication locale déterministe reste disponible; l'assistant LLM optionnel est une aide de triage distincte. Les journaux ne conservent pas les saisies brutes : les valeurs signalées sont empreintées en SHA-256, et les paramètres identifiés comme mots de passe, jetons ou données de paiement sont entièrement masqués. Le filtre en amont complète les requêtes préparées et ne prouve jamais à lui seul qu'une valeur est bénigne.
 
 ## Stack
 
-PHP de Wamp, MySQL ou MariaDB, Python 3.13 local, scikit-learn `MLPClassifier`, NumPy, Flask et Waitress. Les dépendances Python sont épinglées dans `ia/requirements.txt`. Apache n’expose ni le modèle ni les fichiers internes du projet.
+PHP de Wamp, MySQL ou MariaDB, Python 3.13 local, scikit-learn `MLPClassifier`, NumPy, Flask et Waitress. L'assistant facultatif utilise LangGraph et Ollama. Les dépendances Python sont épinglées dans `ia/requirements.txt` et `ia/assistant-requirements.txt`. Apache n'expose ni les modèles ni les fichiers internes du projet.

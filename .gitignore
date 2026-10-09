@@ -1,4 +1,5 @@
 .runtime/
+ollama-models/
 tmp/
 logs/*
 !logs/.htaccess
@@ -11,6 +12,7 @@ config/local.php
 .env.*
 !.env.example
 secrets/*.txt
+docker-secrets/*.txt
 ia/models/*.joblib
 ia/models/*.tmp
 ia/models/synthetic_dataset.json

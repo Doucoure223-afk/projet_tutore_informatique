@@ -1,0 +1,261 @@
+  security\dashboard.php:18:if (isset($_GET['export']) && $_GET['export'] === 'csv') {
+> security\dashboard.php:19:    header('Content-Type: text/csv; charset=utf-8');
+> security\dashboard.php:20:    header('Content-Disposition: attachment;
+filename="cybershield-incidents.csv"');
+  security\dashboard.php:21:    echo "\xEF\xBB\xBF", $logger->exportCsv($filters);
+  security\dashboard.php:22:    exit;
+  security\dashboard.php:24:if (isset($_GET['export']) && $_GET['export'] === 'jsonl') {
+> security\dashboard.php:25:    header('Content-Type: application/x-ndjson; charset=utf-8');
+> security\dashboard.php:26:    header('Content-Disposition: attachment;
+filename="cybershield-incidents.jsonl"');
+> security\dashboard.php:27:    header('X-Content-Type-Options: nosniff');
+  security\dashboard.php:28:    echo $logger->exportJsonLines($filters);
+  security\dashboard.php:29:    exit;
+  security\access.php:22:    $_SESSION['last_activity'] = time();
+> security\access.php:23:    header('Cache-Control: no-store');
+> security\access.php:24:    header('X-Content-Type-Options: nosniff');
+> security\access.php:25:    header('X-Frame-Options: DENY');
+> security\access.php:26:    header('Referrer-Policy: same-origin');
+> security\access.php:27:    header("Content-Security-Policy: default-src 'self'; style-src 'self'
+'unsafe-inline'; script-src 'none'; img-src 'self' data:; base-uri 'self'; frame-ancestors 'none';
+form-action 'self'");
+  security\access.php:28:    $ip = $_SERVER['REMOTE_ADDR'] ?? '';
+  security\access.php:29:    if (PHP_SAPI === 'cli' || in_array($ip, ['127.0.0.1', '::1',
+'::ffff:127.0.0.1'], true)) {
+  security\access.php:34:        $user = current_user();
+> security\access.php:35:        if ($user && ($user['role'] ?? '') === 'admin') { return; }
+  security\access.php:36:    }
+  security\access.php:37:    http_response_code(403);
+> security\access.php:38:    header('Content-Type: text/html; charset=utf-8');
+> security\access.php:39:    echo '<!doctype html><html lang="fr"><meta charset="utf-8"><meta
+name="viewport" content="width=device-width,initial-scale=1"><title>Accès réservé · CyberShield
+AI</title><link rel="stylesheet" href="console.css"><body><main class="access-card"><p
+class="eyebrow">CYBERSHIELD AI</p><h1>Console réservée</h1><p class="muted">Ouvrez la console depuis
+cette machine ou connectez-vous avec un compte administrateur autorisé.</p><a class="button"
+href="../app/login.php">Se connecter</a></main></body></html>';
+  security\access.php:40:    exit;
+  security\access.php:41:}
+  security\dashboard.php:18:if (isset($_GET['export']) && $_GET['export'] === 'csv') {
+> security\dashboard.php:19:    header('Content-Type: text/csv; charset=utf-8');
+> security\dashboard.php:20:    header('Content-Disposition: attachment;
+filename="cybershield-incidents.csv"');
+  security\dashboard.php:21:    echo "\xEF\xBB\xBF", $logger->exportCsv($filters);
+  security\dashboard.php:22:    exit;
+  security\dashboard.php:24:if (isset($_GET['export']) && $_GET['export'] === 'jsonl') {
+> security\dashboard.php:25:    header('Content-Type: application/x-ndjson; charset=utf-8');
+> security\dashboard.php:26:    header('Content-Disposition: attachment;
+filename="cybershield-incidents.jsonl"');
+> security\dashboard.php:27:    header('X-Content-Type-Options: nosniff');
+  security\dashboard.php:28:    echo $logger->exportJsonLines($filters);
+  security\dashboard.php:29:    exit;
+  security\ip-rules.php:33:    }
+> security\ip-rules.php:34:    header('Location: ip-rules.php', true, 303);
+  security\ip-rules.php:35:    exit;
+  security\ip-rules.php:36:}
+  security\ip-rules.php:72:    <?php if (is_array($flash)): ?>
+> security\ip-rules.php:73:      <div class="callout <?= ($flash['type'] ?? '') === 'error' ?
+'danger' : '' ?>" role="status"><?= console_escape($flash['text'] ?? '') ?></div>
+  security\ip-rules.php:74:    <?php endif; ?>
+  security\ip-rules.php:75:    <?php if ($loadError): ?>
+> security\ip-rules.php:76:      <div class="callout danger" role="alert">Le fichier des règles est
+illisible. Les requêtes sont refusées par précaution jusqu’à sa réparation.</div>
+  security\ip-rules.php:77:    <?php endif; ?>
+  security\ip-rules.php:78:
+  security\ip-rules.php:96:        <p class="event-detail">L’adresse courante de cette session est
+<strong><?= console_escape($currentIp) ?></strong>. Évitez de la bloquer pendant votre propre
+session de travail.</p>
+> security\ip-rules.php:97:        <p class="event-detail">La console conserve un accès de secours
+local et reste accessible à un administrateur connecté. Les règles sont enregistrées dans le dossier
+privé des journaux et chaque refus est ajouté au journal d’incidents.</p>
+  security\ip-rules.php:98:        <p class="event-detail">Cette liste n’accepte que des adresses
+individuelles. Elle ne modifie pas les données de compte ni les listes de règles du pare-feu du
+système.</p>
+  security\ip-rules.php:99:      </aside>
+  security\lab.php:7:$result = null;
+> security\lab.php:8:$value = "admin' --";
+  security\lab.php:9:$context = 'login';
+  security\lab.php:10:$error = '';
+  security\lab.php:13:    $value = is_string($_POST['payload'] ?? null) ? substr($_POST['payload'],
+0, 8192) : '';
+> security\lab.php:14:    $context = in_array($_POST['context'] ?? '', ['login', 'search',
+'register', 'admin'], true) ? $_POST['context'] : 'search';
+  security\lab.php:15:    try {
+  security\lab.php:16:        $result = (new HybridAnalyzer())->analyze($value, 'laboratoire',
+$context);
+  security\lab.php:27:    <form method="post" action="lab.php"><input type="hidden"
+name="csrf_token" value="<?=console_escape(console_csrf())?>"><div class="field"><label
+for="payload">Texte à analyser</label><textarea id="payload" name="payload" maxlength="8192"
+required><?=console_escape($value)?></textarea></div>
+> security\lab.php:28:      <div class="field"><label for="context">Contexte du champ</label><select
+id="context" name="context"><?php foreach(['login'=>'Connexion','search'=>'Recherche','register'=>'In
+scription','admin'=>'Administration'] as $key=>$label):?><option value="<?=$key?>"
+<?=$context===$key?'selected':''?>><?=$label?></option><?php endforeach;?></select></div>
+> security\lab.php:29:      <p class="event-detail">À essayer : <code>' OR '1'='1' --</code> ·
+<code>admin' --</code> · <code>Clavier mécanique</code> · <code>Bonjour -- merci</code></p>
+  security\lab.php:30:      <button class="button" type="submit">Analyser localement →</button>
+  security\lab.php:31:    </form></section>
+  security\lab.php:37:    </section></div>
+> security\lab.php:38:  <?php if($error):?><div class="callout danger"
+role="alert"><?=console_escape($error)?></div><?php endif;?>
+  security\lab.php:39:  <?php if($result):$blocked=(bool)$result['would_block'];?><section
+class="card" style="margin-top:16px"><div class="card-head"><div><p
+class="eyebrow">RÉSULTAT</p><h2><?= $blocked?'À bloquer':'Peut être autorisé par le filtre'
+?></h2><p class="sub"><?=console_escape($result['reason'])?></p></div><span class="pill
+<?=$blocked?'danger':'success'?>"><?=$blocked?'BLOCAGE':'AUTORISATION'?></span></div>
+  security\lab.php:40:    <div class="stats" style="margin:12px 0"><div class="stat"><div
+class="stat-label">Score heuristique</div><div class="stat-value"><?= (int)$result['score'] ?><small
+style="font-size:13px;color:var(--muted)"> / 100</small></div></div><div class="stat"><div
+class="stat-label">Source de la décision</div><div class="stat-value"
+style="font-size:20px"><?=console_escape($result['source'])?></div></div><div class="stat"><div
+class="stat-label">Score MLP</div><div class="stat-value"
+style="font-size:20px"><?=isset($result['risk'])?number_format((float)$result['risk']*100,1,',','
+').' %':'—'?></div></div><div class="stat"><div class="stat-label">Type estimé</div><div
+class="stat-value"
+style="font-size:17px"><?=console_escape($result['attack_type'])?></div></div></div>
+  security\middleware.php:69:    $status = 403;
+> security\middleware.php:70:    header('X-CyberShield: active');
+> security\middleware.php:71:    header('X-Content-Type-Options: nosniff');
+> security\middleware.php:72:    header('X-Frame-Options: SAMEORIGIN');
+> security\middleware.php:73:    header('Referrer-Policy: same-origin');
+  security\middleware.php:74:    try {
+  security\middleware.php:75:        $logger = new SecurityLogger(rtrim($config['log_dir'], '/\\') .
+'/events.jsonl');
+  security\middleware.php:86:            $status = 429;
+> security\middleware.php:87:            header('Retry-After: 60');
+  security\middleware.php:88:            $event = array_merge($event, ['action' => 'BLOCKED',
+'attack_type' => 'RATE_LIMIT', 'reason' => 'Limite de requêtes atteinte.']);
+  security\middleware.php:89:        } else {
+  security\middleware.php:110:            $context = match ($filename) {
+> security\middleware.php:111:                'login.php' => 'login', 'inscription.php' =>
+'register', 'dashboard.php' => 'admin', default => 'search',
+  security\middleware.php:112:            };
+  security\middleware.php:113:            $analyzer = new HybridAnalyzer();
+  security\response_handler.php:7:        http_response_code($statusCode);
+> security\response_handler.php:8:        header('X-Content-Type-Options: nosniff');
+> security\response_handler.php:9:        header('X-Frame-Options: DENY');
+> security\response_handler.php:10:        header('Cache-Control: no-store');
+> security\response_handler.php:11:        header('Referrer-Policy: no-referrer');
+> security\response_handler.php:12:        header("Content-Security-Policy: default-src 'none';
+style-src 'unsafe-inline'; frame-ancestors 'none'; base-uri 'none'");
+  security\response_handler.php:13:        if (strpos($_SERVER['HTTP_ACCEPT'] ?? '',
+'application/json') !== false) {
+> security\response_handler.php:14:            header('Content-Type: application/json;
+charset=utf-8');
+  security\response_handler.php:15:            echo json_encode(['error' => 'request_blocked',
+'message' => 'Cette requête a été arrêtée par CyberShield AI.', 'incident_id' => $incident],
+JSON_UNESCAPED_UNICODE);
+  security\response_handler.php:16:            exit;
+  security\response_handler.php:17:        }
+> security\response_handler.php:18:        header('Content-Type: text/html; charset=utf-8');
+  security\response_handler.php:19:        $id = htmlspecialchars($incident, ENT_QUOTES |
+ENT_SUBSTITUTE, 'UTF-8');
+  security\response_handler.php:20:        // Never reflect the intercepted payload, request headers
+or credentials.
+  security\response_handler.php:21:        echo '<!doctype html><html lang="fr"><head><meta
+charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Requête
+bloquée · CyberShield AI</title><style>';
+> security\response_handler.php:22:        echo 'body{margin:0;min-height:100vh;display:grid;place-it
+ems:center;background:#f1efe8;color:#282e29;font:16px/1.6
+system-ui,sans-serif}main{max-width:540px;margin:24px;padding:36px;border:1px solid #d9d8ce;border-ra
+dius:7px;background:#faf9f5}.brand{color:#285c4d;letter-spacing:.12em;font-size:13px;font-weight:700}
+h1{font:600 32px/1.15 Georgia,serif;letter-spacing:-.035em;margin:24px 0
+16px}p{color:#707870}code{display:block;padding:12px;background:#e9e8df;border:1px solid
+#d9d8ce;border-radius:5px;overflow-wrap:anywhere}a{display:inline-block;padding:10px
+15px;margin-top:18px;border:1px solid #285c4d;border-radius:5px;background:#285c4d;color:#f8f7f1;text
+-decoration:none;font-weight:650}a:hover{background:#204b3f}</style></head><body><main><div
+class="brand">CYBERSHIELD AI</div><h1>Cette requête a été bloquée.</h1><p>Notre protection a détecté
+une entrée qui nécessite une vérification. Vous pouvez revenir à l’accueil et réessayer avec une
+saisie différente.</p><p>Si le problème persiste, transmettez cette référence à l’administrateur
+:</p><code>' . $id . '</code><a href="../index.php">Revenir à l’accueil</a></main></body></html>';
+  security\response_handler.php:23:        exit;
+  security\response_handler.php:24:    }
+  security\test_diagram.php:86:                    $testCases = [
+> security\test_diagram.php:87:                        ["admin' --", "Score 30-80 - Analyse IA",
+"medium-risk"],
+  security\test_diagram.php:88:                        ["test' AND '1'='1", "Score 30-80 - Booléen",
+"medium-risk"]
+  security\test_diagram.php:89:                    ];
+  security\test_diagram.php:102:                        ["'; DROP TABLE users --", "Score > 80 -
+Destructif", "high-risk"],
+> security\test_diagram.php:103:                        ["admin' --", "Score 30-80 - Analyse IA",
+"medium-risk"],
+  security\test_diagram.php:104:                        ["test' AND '1'='1", "Score 30-80 -
+Booléen", "medium-risk"],
+  security\test_diagram.php:105:                        ["' OR SLEEP(5) --", "Score 30-80 -
+Time-based", "medium-risk"],
+  security\test_protection.php:29:        ["' OR '1'='1", true, "Injection basique"],
+> security\test_protection.php:30:        ["admin' --", true, "Commentaire SQL"],
+  security\test_protection.php:31:        ["test", false, "Entrée normale"],
+  security\test_protection.php:32:        ["' UNION SELECT * FROM users --", true, "Union
+injection"],
+  app\login.php:2:require_once __DIR__ . '/config.php';
+> app\login.php:3:require_once __DIR__ . '/AdminTotp.php';
+  app\login.php:4:require_once __DIR__ . '/LoginThrottle.php';
+  app\login.php:5:$error = '';
+  app\login.php:8:if (isset($_GET['mfa_already_set'])) { $success = 'Le second facteur est déjà
+actif. Saisissez votre code pour vous connecter.'; }
+> app\login.php:9:$redirect = input_text($_POST, 'redirect', input_text($_GET, 'redirect'));
+> app\login.php:10:$target = $redirect === 'paiement' ? 'paiement.php' : 'dashboard.php';
+  app\login.php:11:if (($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'POST' && current_user()) {
+> app\login.php:12:    header('Location: ' . $target);
+  app\login.php:13:    exit;
+  app\login.php:14:}
+  app\login.php:30:    } else {
+> app\login.php:31:    $result = execute_query_secure('SELECT id, username, email, role, password
+FROM users WHERE username = ? AND active = 1 LIMIT 1', [$username]);
+  app\login.php:32:    $user = $result ? $result->fetch_assoc() : null;
+  app\login.php:33:    $valid = false;
+  app\login.php:37:        $valid = $isHash ? password_verify($password, $stored) :
+hash_equals($stored, $password);
+> app\login.php:38:        $isLegacyDemo = ($user['username'] === 'cybershield_admin' &&
+$user['email'] === 'admin@cybershield.test')
+  app\login.php:39:            || ($user['username'] === 'cybershield_client' && $user['email'] ===
+'client@cybershield.test');
+  app\login.php:40:        if ($isLegacyDemo) {
+  app\login.php:48:        }
+> app\login.php:49:        if (strtolower((string) $user['role']) === 'admin') {
+  app\login.php:50:            try {
+> app\login.php:51:                $mfa = execute_query_secure('SELECT encrypted_secret FROM
+admin_mfa WHERE user_id = ? LIMIT 1', [(int) $user['id']]);
+  app\login.php:52:                if (!$mfa) {
+  app\login.php:53:                    throw new RuntimeException('Schéma MFA indisponible.');
+  app\login.php:56:                if (!$mfaRecord) {
+> app\login.php:57:                    $_SESSION['pending_admin_mfa_id'] = (int) $user['id'];
+> app\login.php:58:                    $_SESSION['pending_admin_mfa_started'] = time();
+> app\login.php:59:                    unset($_SESSION['pending_admin_mfa_secret']);
+  app\login.php:60:                    $loginThrottle->clear($username, $clientIp);
+> app\login.php:61:                    header('Location: mfa-enroll.php', true, 303);
+  app\login.php:62:                    exit;
+  app\login.php:63:                }
+> app\login.php:64:                $secret = AdminTotp::decrypt((string)
+$mfaRecord['encrypted_secret']);
+> app\login.php:65:                if (!AdminTotp::verify($secret, input_text($_POST, 'totp_code')))
+{
+  app\login.php:66:                    throw new RuntimeException('Code de vérification incorrect.');
+  app\login.php:67:                }
+  app\login.php:70:                    ? 'Identifiants ou code de vérification incorrects.'
+> app\login.php:71:                    : 'Connexion administrateur indisponible. Vérifiez la
+configuration MFA et réessayez.';
+  app\login.php:72:            }
+  app\login.php:73:            if ($error === '') {
+  app\login.php:75:                establish_user_session($user);
+> app\login.php:76:                header('Location: ' . $target);
+  app\login.php:77:                exit;
+  app\login.php:78:            }
+  app\login.php:81:            establish_user_session($user);
+> app\login.php:82:            header('Location: ' . $target);
+  app\login.php:83:            exit;
+  app\login.php:84:        }
+  app\login.php:127:                <input type="hidden" name="csrf_token" value="<?php echo
+escape_output($_SESSION['csrf_token']); ?>">
+> app\login.php:128:                <input type="hidden" name="redirect" value="<?php echo
+escape_output($redirect); ?>">
+  app\login.php:129:                <div class="form-group">
+  app\login.php:130:                    <label for="username">Nom d'utilisateur</label>
+  app\login.php:144:                    <input type="text" id="totp_code" name="totp_code"
+inputmode="numeric" autocomplete="one-time-code"
+> app\login.php:145:                           pattern="[0-9]{6}" maxlength="6" placeholder="Requis
+pour un administrateur">
+  app\login.php:146:                </div>
+  app\login.php:147:                <input type="submit" name="Envoyer" class="submit-btn" value="Se
+connecter">

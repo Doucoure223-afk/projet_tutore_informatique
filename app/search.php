@@ -14,26 +14,26 @@ unset($_SESSION['cart_notice']);
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Recherche de produits</title>
-    <link rel="stylesheet" href="style_search.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <title>Catalogue de démonstration · CyberShield AI</title>
+    <link rel="stylesheet" href="theme.css?v=<?= (int) filemtime(__DIR__ . '/theme.css') ?>">
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <h1>Recherche de produits</h1>
+            <h1>Catalogue de démonstration</h1>
             <p class="subtitle">Rechercher parmi le catalogue</p>
             <form method="GET" action="" class="search-form">
                 <div class="search-box">
-                    <input type="text" name="q" class="search-input" placeholder="clavier" value="<?php echo htmlspecialchars($search_query); ?>">
-                    <button type="submit" class="search-btn">Rechercher <i class="fas fa-search"></i></button>
+                    <label class="sr-only" for="product-search">Nom, description ou catégorie du produit</label>
+                    <input type="search" id="product-search" name="q" class="search-input" placeholder="Ex. clavier, ordinateur" value="<?php echo htmlspecialchars($search_query); ?>">
+                    <button type="submit" class="search-btn">Rechercher</button>
                     <?php if (!empty($search_query)): ?><a href="search.php" class="clear-link">Effacer la recherche</a><?php endif; ?>
                 </div>
             </form>
             <nav class="nav-links">
-                <a href="search.php">Recherche</a>
+                <a href="search.php" aria-current="page">Recherche</a>
                 <a href="login.php">Connexion</a>
-                <a href="dashboard.php">Dashboard</a>
+                <a href="dashboard.php">Mon espace</a>
                 <a href="panier.php">Panier<?php $cart_count = !empty($_SESSION['cart']) ? array_sum(array_column($_SESSION['cart'], 'qty')) : 0; if ($cart_count > 0) echo ' (' . $cart_count . ')'; ?></a>
                 <a href="inscription.php">Inscription</a>
             </nav>
@@ -70,23 +70,20 @@ unset($_SESSION['cart_notice']);
                     <?php endforeach; ?>
                 </div>
             <?php else: ?>
-                <div class="no-results"><h3>Aucun résultat trouvé</h3><p>Essayez avec d'autres termes ou parcourez nos catégories ci-dessous</p></div>
+                <div class="no-results"><h3>Aucun résultat trouvé</h3><p>Essayez un autre terme ou ouvrez « Parcourir par catégorie » plus bas.</p></div>
             <?php endif; ?>
         </div>
         <section class="ecom-section">
-            <h3>Découvrez nos catégories</h3>
-            <div class="categories-grid">
-                <a href="search.php?q=ordinateur" class="category-card"><i class="fas fa-laptop"></i><span>Ordinateurs</span></a>
-                <a href="search.php?q=clavier" class="category-card"><i class="fas fa-keyboard"></i><span>Claviers</span></a>
-                <a href="search.php?q=souris" class="category-card"><i class="fas fa-mouse"></i><span>Souris &amp; Périphériques</span></a>
-                <a href="search.php?q=casque" class="category-card"><i class="fas fa-headphones"></i><span>Audio &amp; Casques</span></a>
-            </div>
-            <div class="trust-badges">
-                <div class="trust-item"><i class="fas fa-truck"></i> Catalogue de démonstration</div>
-                <div class="trust-item"><i class="fas fa-shield-alt"></i> Achat simulé</div>
-                <div class="trust-item"><i class="fas fa-undo"></i> Aucun achat réel</div>
-                <div class="trust-item"><i class="fas fa-headset"></i> Laboratoire CyberShield</div>
-            </div>
+            <details class="categories-disclosure">
+                <summary>Parcourir par catégorie</summary>
+                <div class="categories-grid">
+                    <a href="search.php?q=ordinateur" class="category-card"><span class="category-symbol" aria-hidden="true">O</span><span>Ordinateurs</span></a>
+                    <a href="search.php?q=clavier" class="category-card"><span class="category-symbol" aria-hidden="true">C</span><span>Claviers</span></a>
+                    <a href="search.php?q=souris" class="category-card"><span class="category-symbol" aria-hidden="true">S</span><span>Souris &amp; périphériques</span></a>
+                    <a href="search.php?q=casque" class="category-card"><span class="category-symbol" aria-hidden="true">A</span><span>Audio &amp; casques</span></a>
+                </div>
+            </details>
+            <p class="catalog-disclosure-note">Catalogue de démonstration : panier et paiement simulés, aucun achat réel.</p>
         </section>
     </div>
 </body>

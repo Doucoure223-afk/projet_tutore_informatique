@@ -7,7 +7,11 @@ $success = isset($_GET['registered']) ? 'Compte créé. Vous pouvez vous connect
 if (isset($_GET['mfa_expired'])) { $success = 'La configuration MFA a expiré. Reconnectez-vous pour recommencer.'; }
 if (isset($_GET['mfa_already_set'])) { $success = 'Le second facteur est déjà actif. Saisissez votre code pour vous connecter.'; }
 $redirect = input_text($_POST, 'redirect', input_text($_GET, 'redirect'));
-$target = $redirect === 'paiement' ? 'paiement.php' : 'dashboard.php';
+$target = match ($redirect) {
+    'paiement' => 'paiement.php',
+    'console' => '../security/dashboard.php',
+    default => 'dashboard.php',
+};
 if (($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'POST' && current_user()) {
     header('Location: ' . $target);
     exit;
@@ -94,17 +98,16 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Connexion — CyberShield AI</title>
     <script>(function(){var t=localStorage.getItem('theme');if(t==='light'||t==='dark')document.documentElement.setAttribute('data-theme',t);})();</script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="style_login.css">
+    <link rel="stylesheet" href="theme.css?v=<?= (int) filemtime(__DIR__ . '/theme.css') ?>">
 </head>
 <body>
     <div class="container">
-        <button type="button" class="theme-toggle-login" id="themeToggleLogin" title="Changer de thème" aria-label="Changer de thème">
-            <i class="fas fa-moon" id="themeIconLogin"></i>
+        <button type="button" class="theme-toggle-login" id="themeToggleLogin" aria-label="Passer au thème sombre" aria-pressed="false">
+            Mode sombre
         </button>
         <div class="header">
             <div class="shield-icon">
-                <svg width="32" height="32" viewBox="0 0 24 24" fill="#818cf8" xmlns="http://www.w3.org/2000/svg">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
                     <path d="M12 2L4 6v6c0 5.55 3.84 10.74 8 12 4.16-1.26 8-6.45 8-12V6l-8-4zm0 2.18l6 3v5.82c0 4.35-2.78 8.43-6 9.82-3.22-1.39-6-5.47-6-9.82V7.18l6-3z"/>
                 </svg>
             </div>
@@ -140,9 +143,10 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
                            required>
                 </div>
                 <div class="form-group">
-                    <label for="totp_code">Code d’authentification</label>
+                <label for="totp_code">Code d’authentification (administrateurs)</label>
                     <input type="text" id="totp_code" name="totp_code" inputmode="numeric" autocomplete="one-time-code"
-                           pattern="[0-9]{6}" maxlength="6" placeholder="Requis pour un administrateur">
+                           pattern="[0-9]{6}" maxlength="6" aria-describedby="totp-help" placeholder="Code à six chiffres">
+                    <small class="field-hint" id="totp-help">À renseigner uniquement si vous vous connectez avec un compte administrateur.</small>
                 </div>
                 <input type="submit" name="Envoyer" class="submit-btn" value="Se connecter">
             </form>
@@ -159,15 +163,19 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
         document.addEventListener('DOMContentLoaded', function() {
             var theme = document.documentElement.getAttribute('data-theme') || 'light';
             var btn = document.getElementById('themeToggleLogin');
-            var icon = document.getElementById('themeIconLogin');
-            if (btn && icon) {
-                icon.className = theme === 'light' ? 'fas fa-moon' : 'fas fa-sun';
+            if (btn) {
+                var updateThemeButton = function() {
+                    btn.textContent = theme === 'light' ? 'Mode sombre' : 'Mode clair';
+                    btn.setAttribute('aria-label', theme === 'light' ? 'Passer au thème sombre' : 'Passer au thème clair');
+                    btn.setAttribute('aria-pressed', theme === 'dark' ? 'true' : 'false');
+                };
+                updateThemeButton();
                 btn.addEventListener('click', function() {
                     var next = theme === 'light' ? 'dark' : 'light';
                     theme = next;
                     localStorage.setItem('theme', next);
                     document.documentElement.setAttribute('data-theme', next);
-                    icon.className = next === 'light' ? 'fas fa-moon' : 'fas fa-sun';
+                    updateThemeButton();
                 });
             }
         });

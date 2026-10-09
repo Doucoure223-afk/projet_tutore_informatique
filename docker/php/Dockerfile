@@ -12,7 +12,7 @@ COPY config/ ./config/
 COPY database/ ./database/
 COPY security/access.php security/bootstrap.php security/dashboard.php security/detector.php ./security/
 COPY security/explanations.php security/hybrid_analyzer.php security/ia_analyzer.php ./security/
-COPY security/ip-rules.php security/ip_access.php security/lab.php security/logger.php ./security/
+COPY security/ip-rules.php security/ip_access.php security/lab.php security/logger.php security/assistant.php security/assistant-client.php security/assistant-chat.php security/assistant-widget.js ./security/
 COPY security/middleware.php security/response_handler.php security/console.css ./security/
 COPY index.php ./.htaccess ./
 COPY logs/.htaccess ./logs/.htaccess

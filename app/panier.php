@@ -55,8 +55,7 @@ $total = number_format(cart_total($cart_items), 2, ',', ' ');
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Mon panier</title>
-    <link rel="stylesheet" href="style_panier.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="theme.css?v=<?= (int) filemtime(__DIR__ . '/theme.css') ?>">
 </head>
 <body>
     <div class="container">
@@ -64,10 +63,10 @@ $total = number_format(cart_total($cart_items), 2, ',', ' ');
             <h1>Mon panier</h1>
             <p class="subtitle">Récapitulatif de votre sélection</p>
             <nav class="nav-links">
-                <a href="search.php">Recherche</a>
+                <a href="search.php">Catalogue</a>
                 <a href="login.php">Connexion</a>
-                <a href="dashboard.php">Dashboard</a>
-                <a href="panier.php">Panier</a>
+                <a href="dashboard.php">Mon espace</a>
+                <a href="panier.php" aria-current="page">Panier</a>
                 <a href="inscription.php">Inscription</a>
             </nav>
         </div>
@@ -75,7 +74,7 @@ $total = number_format(cart_total($cart_items), 2, ',', ' ');
         <?php if ($cart_notice): ?><p class="cart-card" role="status"><?= escape_output($cart_notice) ?></p><?php endif; ?>
         <?php if ($confirmation): ?>
         <div class="success-box">
-            <i class="fas fa-check-circle"></i>
+            <svg class="status-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5" /></svg>
             <strong>Simulation terminée</strong>
             <p>Référence <?= escape_output($confirmation['reference']) ?> · <?= number_format($confirmation['total'], 2, ',', ' ') ?> €</p>
             <p>Aucun paiement ni achat réel n’a été effectué.</p>
@@ -85,7 +84,7 @@ $total = number_format(cart_total($cart_items), 2, ',', ' ');
 
         <?php if (empty($cart_items)): ?>
         <div class="empty-cart">
-            <i class="fas fa-shopping-cart"></i>
+            <svg class="cart-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M3 4h2l2.2 10.2a2 2 0 0 0 2 1.6h7.9a2 2 0 0 0 1.9-1.4L21 8H6" /><circle cx="10" cy="20" r="1" /><circle cx="18" cy="20" r="1" /></svg>
             <p>Votre panier est vide</p>
             <a href="search.php" class="btn-search">Parcourir les produits</a>
         </div>

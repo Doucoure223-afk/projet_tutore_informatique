@@ -1,4 +1,4 @@
-$ErrorActionPreference = 'Stop'
+﻿$ErrorActionPreference = 'Stop'
 $projectRoot = Split-Path -Parent $PSScriptRoot
 $secretDirectory = Join-Path $projectRoot 'secrets'
 
@@ -29,10 +29,23 @@ function New-SecretFile([string] $path, [int] $minimumLength = 32) {
 New-SecretFile (Join-Path $secretDirectory 'db_root_password.txt')
 New-SecretFile (Join-Path $secretDirectory 'db_password.txt')
 New-SecretFile (Join-Path $secretDirectory 'siem_token.txt') 16
+New-SecretFile (Join-Path $secretDirectory 'assistant_token.txt')
 
 $environmentFile = Join-Path $projectRoot '.env'
 if (-not (Test-Path -LiteralPath $environmentFile)) {
     Copy-Item -LiteralPath (Join-Path $projectRoot '.env.example') -Destination $environmentFile
+}
+$environmentText = Get-Content -LiteralPath $environmentFile -Raw
+$modelCache = if ($env:OLLAMA_MODELS) { $env:OLLAMA_MODELS } else { Join-Path $env:USERPROFILE '.ollama\models' }
+$modelCache = $modelCache.Replace('\', '/')
+if ($environmentText -notmatch '(?m)^\s*OLLAMA_MODELS_PATH=') {
+    Add-Content -LiteralPath $environmentFile -Value "OLLAMA_MODELS_PATH=$modelCache"
+} elseif ($environmentText -match '(?m)^\s*OLLAMA_MODELS_PATH\s*=\s*(|\./ollama-models)\s*$') {
+    $environmentText = [regex]::Replace($environmentText, '(?m)^\s*OLLAMA_MODELS_PATH\s*=.*$', "OLLAMA_MODELS_PATH=$modelCache")
+    [System.IO.File]::WriteAllText($environmentFile, $environmentText, [System.Text.UTF8Encoding]::new($false))
+}
+if ($environmentText -notmatch '(?m)^\s*CYBERSHIELD_ASSISTANT_MODEL=') {
+    Add-Content -LiteralPath $environmentFile -Value 'CYBERSHIELD_ASSISTANT_MODEL=qwen2.5:7b-instruct'
 }
 
 Write-Output 'Secrets locaux créés ou conservés; leurs valeurs ne sont pas affichées.'
