@@ -2,13 +2,21 @@
 /** Shared access control for the local demonstration console. */
 function console_require_access(): void
 {
+    require_once __DIR__ . '/tls-request.php';
+    cybershield_require_secure_transport();
+    require_once __DIR__ . '/client_identity.php';
+    if (PHP_SAPI !== 'cli') {
+        try { cybershield_client_identity(); }
+        catch (CybershieldClientIdentityException $error) {
+            http_response_code(403);
+            exit('Identité du relais réseau non authentifiée.');
+        }
+    }
     if (!defined('CYBERSHIELD_SKIP_REQUEST')) { define('CYBERSHIELD_SKIP_REQUEST', true); }
     if (session_status() === PHP_SESSION_NONE) {
         ini_set('session.use_strict_mode', '1');
         ini_set('session.use_only_cookies', '1');
-        session_set_cookie_params(['lifetime' => 0, 'path' => '/',
-            'secure' => !empty($_SERVER['HTTPS']) && strtolower((string) $_SERVER['HTTPS']) !== 'off',
-            'httponly' => true, 'samesite' => 'Lax']);
+        session_set_cookie_params(RequestTransport::cookieOptions());
         session_start();
     }
     if (!empty($_SESSION['last_activity']) && time() - (int) $_SESSION['last_activity'] > 1800) {
@@ -64,6 +72,13 @@ function console_escape($value): string
     return htmlspecialchars(is_scalar($value) || $value === null ? (string) $value : '', ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
 }
 
+function console_assistant_deadline_ms(): int
+{
+    $configured = filter_var(getenv('CYBERSHIELD_ASSISTANT_TIMEOUT_SECONDS'), FILTER_VALIDATE_FLOAT);
+    $seconds = $configured !== false ? max(2, min(20, (float) $configured)) : 10;
+    return (int) round(($seconds + 4) * 1000);
+}
+
 function console_logger(): SecurityLogger
 {
     $directory = getenv('CYBERSHIELD_LOG_DIR') ?: __DIR__ . '/../logs';
@@ -97,7 +112,7 @@ function console_sidebar(string $active): void
         <div class="sidebar-note"><span class="dot"></span> Démonstration locale<p>SQLi · règles + MLP + assistant LLM local<br>Décisions et traces vérifiables</p></div>
     </aside>
     <?php if (in_array($active, ['dashboard', 'lab', 'ip-rules'], true)): ?>
-    <div class="assistant-widget" data-endpoint="assistant-chat.php" data-page="<?= console_escape($active) ?>">
+    <div class="assistant-widget" data-endpoint="assistant-chat.php" data-page="<?= console_escape($active) ?>" data-timeout-ms="<?= console_assistant_deadline_ms() ?>">
         <button class="assistant-launcher" type="button" aria-expanded="false" aria-controls="assistant-widget-panel">
             <span aria-hidden="true">IA</span><span>Poser une question</span>
         </button>
@@ -106,17 +121,21 @@ function console_sidebar(string $active): void
                 <div><p class="eyebrow">CYBERSHIELD AI</p><h2 id="assistant-widget-title">Aide à la supervision</h2></div>
                 <button class="assistant-widget-close" type="button" aria-label="Fermer l’assistant">×</button>
             </header>
-            <p class="assistant-widget-intro">Le contexte se limite aux compteurs et catégories d’événements. Le texte saisi est envoyé au modèle local; n’y colle aucun secret ni renseignement personnel.</p>
+            <p class="assistant-widget-intro">L’assistant reçoit les compteurs et, si tu sélectionnes une alerte, ses métadonnées de règle uniquement. Aucun payload, adresse IP, route ou note de triage n’est transmis.</p>
             <form class="assistant-widget-form">
                 <input type="hidden" name="csrf_token" value="<?= console_escape(console_csrf()) ?>">
                 <input type="hidden" name="page" value="<?= console_escape($active) ?>">
+                <input type="hidden" name="event_id" value="">
+                <p class="assistant-widget-selection" hidden></p>
                 <label for="assistant-widget-question">Ta question</label>
                 <textarea id="assistant-widget-question" name="question" maxlength="1200" rows="3" required placeholder="Ex. Que signifie le mode observation ?"></textarea>
-                <div class="assistant-widget-actions"><span>Réponse locale · lecture seule</span><button class="button" type="submit">Envoyer →</button></div>
+                <div class="assistant-widget-actions"><span>Lecture seule</span><div class="assistant-submit-actions"><button class="button secondary" type="button" data-assistant-cancel hidden>Annuler</button><button class="button" type="submit">Envoyer →</button></div></div>
             </form>
             <div class="assistant-widget-response" aria-live="polite" aria-atomic="true" hidden></div>
+            <p class="assistant-widget-meta assistant-help" hidden></p>
         </section>
     </div>
+    <script nonce="<?= console_escape((string) ($_SERVER['CYBERSHIELD_CSP_NONCE'] ?? '')) ?>" src="assistant-request.js?v=<?= (int) filemtime(__DIR__ . '/assistant-request.js') ?>" defer></script>
     <script nonce="<?= console_escape((string) ($_SERVER['CYBERSHIELD_CSP_NONCE'] ?? '')) ?>" src="assistant-widget.js?v=<?= (int) filemtime(__DIR__ . '/assistant-widget.js') ?>" defer></script>
     <?php endif; ?>
     <?php

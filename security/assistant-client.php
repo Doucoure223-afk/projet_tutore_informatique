@@ -16,10 +16,12 @@ function cybershield_assistant_token_path(): string
 
 function cybershield_assistant_health(): array
 {
-    $health = ['status' => 'unavailable', 'model_ready' => false, 'model' => '', 'available' => false];
+    $health = ['status' => 'unavailable', 'service_available' => false, 'model_ready' => false,
+        'model_loaded' => false, 'model_installed' => false, 'model' => '', 'available' => false];
     if (!function_exists('curl_init')) { return $health; }
     $handle = curl_init(cybershield_assistant_url() . '/health');
-    curl_setopt_array($handle, [CURLOPT_RETURNTRANSFER => true, CURLOPT_CONNECTTIMEOUT => 2, CURLOPT_TIMEOUT => 3]);
+    curl_setopt_array($handle, [CURLOPT_RETURNTRANSFER => true, CURLOPT_CONNECTTIMEOUT_MS => 200,
+        CURLOPT_TIMEOUT_MS => 800, CURLOPT_FOLLOWLOCATION => false, CURLOPT_PROXY => '']);
     $body = curl_exec($handle);
     $status = (int) curl_getinfo($handle, CURLINFO_RESPONSE_CODE);
     curl_close($handle);
@@ -27,8 +29,22 @@ function cybershield_assistant_health(): array
         $decoded = json_decode($body, true);
         if (is_array($decoded)) { $health = $decoded + $health; }
     }
-    $health['available'] = $status === 200 && !empty($health['model_ready']);
+    $health['available'] = $status === 200 && (!empty($health['service_available']) || !empty($health['model_ready']));
     return $health;
+}
+
+function cybershield_assistant_timeout_ms(): int
+{
+    return console_assistant_deadline_ms() - 2000;
+}
+
+/** Greetings, help and mode questions do not need journal scans or a call to the MLP. */
+function cybershield_assistant_needs_context(string $question): bool
+{
+    $normalized = function_exists('mb_strtolower') ? mb_strtolower($question, 'UTF-8') : strtolower($question);
+    $normalized = preg_replace('/[.!?,;:]+$/u', '', trim($normalized));
+    return !in_array($normalized, ['salut', 'bonjour', 'bonsoir', 'hello', 'coucou', 'merci',
+        'aide', 'que peux-tu faire', 'que peux tu faire', 'comment peux-tu m’aider'], true);
 }
 
 function cybershield_assistant_clean_question($value): string
@@ -45,7 +61,7 @@ function cybershield_assistant_clean_question($value): string
     return is_string($question) ? $question : '[Question expurgée]';
 }
 
-function cybershield_assistant_context(string $page): array
+function cybershield_assistant_context(string $page, ?string $eventId = null): array
 {
     $allowedPages = ['dashboard', 'lab', 'ip-rules', 'assistant'];
     if (!in_array($page, $allowedPages, true)) { $page = 'console'; }
@@ -69,7 +85,7 @@ function cybershield_assistant_context(string $page): array
         ];
     }
     $securityConfig = require __DIR__ . '/../config/security.php';
-    return [
+    $context = [
         'page' => $page,
         'period_days' => 7,
         'block_mode' => (bool) ($securityConfig['block_mode'] ?? false),
@@ -84,9 +100,35 @@ function cybershield_assistant_context(string $page): array
         ],
         'recent' => $recent,
     ];
+    if (is_string($eventId) && $eventId !== '' && strlen($eventId) <= 128 && !preg_match('/[\x00-\x1f\x7f]/', $eventId)) {
+        $event = $logger->findEventByRequestId($eventId);
+        if ($event && !empty($event['reviewable']) && is_string($event['rule_id'] ?? null)) {
+            $action = strtoupper((string) ($event['action'] ?? ''));
+            $source = strtolower((string) ($event['source'] ?? ''));
+            $type = strtoupper((string) ($event['attack_type'] ?? 'OTHER'));
+            $time = (string) ($event['timestamp'] ?? '');
+            $context['selected_event'] = [
+                'rule_id' => substr((string) $event['rule_id'], 0, 32),
+                'rule_name' => substr((string) ($event['rule_name'] ?? ''), 0, 100),
+                'severity' => in_array($event['severity'] ?? '', ['low', 'medium', 'high', 'critical'], true) ? $event['severity'] : 'medium',
+                'category' => substr((string) ($event['category'] ?? ''), 0, 80),
+                'cwe' => preg_match('/^CWE-[0-9]{1,5}$/D', (string) ($event['cwe'] ?? '')) ? $event['cwe'] : '',
+                'owasp' => preg_match('/^A[0-9]{2}:2021-[A-Za-z -]{1,40}$/D', (string) ($event['owasp'] ?? '')) ? $event['owasp'] : '',
+                'description' => substr((string) ($event['rule_description'] ?? ''), 0, 500),
+                'remediation' => substr((string) ($event['rule_remediation'] ?? ''), 0, 500),
+                'action' => in_array($action, ['BLOCKED', 'BLOCKED_BY_AI', 'ALLOWED', 'MONITORED'], true) ? $action : 'OTHER',
+                'type' => preg_match('/^[A-Z0-9_-]{1,40}$/D', $type) ? $type : 'OTHER',
+                'source' => in_array($source, ['heuristic', 'ai', 'mlp', 'ip_policy'], true) ? $source : 'other',
+                'score' => max(0, min(100, (int) ($event['score'] ?? 0))),
+                'mlp_score' => isset($event['risk']) && is_numeric($event['risk']) ? max(0, min(1, (float) $event['risk'])) : null,
+                'time' => preg_match('/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/', $time) ? substr($time, 0, 25) : 'unknown',
+            ];
+        }
+    }
+    return $context;
 }
 
-function cybershield_assistant_ask($rawQuestion, string $page): array
+function cybershield_assistant_ask($rawQuestion, string $page, ?string $eventId = null): array
 {
     try {
         $question = cybershield_assistant_clean_question($rawQuestion);
@@ -103,9 +145,15 @@ function cybershield_assistant_ask($rawQuestion, string $page): array
         return ['ok' => false, 'status' => 503, 'error' => 'Le jeton privé du service assistant est absent. Relance la configuration locale.'];
     }
 
+    // Release the browser session before building context or waiting for another service.
+    if (session_status() === PHP_SESSION_ACTIVE) { session_write_close(); }
+    $securityConfig = require __DIR__ . '/../config/security.php';
+    $context = cybershield_assistant_needs_context($question)
+        ? cybershield_assistant_context($page, $eventId)
+        : ['page' => $page, 'block_mode' => (bool) ($securityConfig['block_mode'] ?? false)];
     $payload = json_encode([
         'question' => $question,
-        'context' => cybershield_assistant_context($page),
+        'context' => $context,
     ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
     if (!is_string($payload)) {
         return ['ok' => false, 'status' => 500, 'error' => 'Impossible de préparer la question.'];
@@ -118,22 +166,34 @@ function cybershield_assistant_ask($rawQuestion, string $page): array
         CURLOPT_POSTFIELDS => $payload,
         CURLOPT_HTTPHEADER => ['Content-Type: application/json', 'Accept: application/json', 'Authorization: Bearer ' . $token],
         CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_CONNECTTIMEOUT => 3,
-        CURLOPT_TIMEOUT => 95,
+        CURLOPT_CONNECTTIMEOUT_MS => 500,
+        CURLOPT_TIMEOUT_MS => cybershield_assistant_timeout_ms(),
+        CURLOPT_PROXY => '',
         CURLOPT_FOLLOWLOCATION => false,
         CURLOPT_PROTOCOLS => CURLPROTO_HTTP | CURLPROTO_HTTPS,
         CURLOPT_REDIR_PROTOCOLS => CURLPROTO_HTTP | CURLPROTO_HTTPS,
     ]);
     $body = curl_exec($handle);
+    $curlError = curl_errno($handle);
     $status = (int) curl_getinfo($handle, CURLINFO_RESPONSE_CODE);
     curl_close($handle);
     $response = is_string($body) ? json_decode($body, true) : null;
     if ($status === 200 && is_array($response) && is_string($response['answer'] ?? null) && trim($response['answer']) !== '') {
         $answer = function_exists('mb_substr') ? mb_substr($response['answer'], 0, 6000, 'UTF-8') : substr($response['answer'], 0, 6000);
-        return ['ok' => true, 'status' => 200, 'answer' => $answer];
+        return ['ok' => true, 'status' => 200, 'answer' => $answer,
+            'source' => ($response['source'] ?? '') === 'local' ? 'local' : 'llm',
+            'kind' => is_string($response['kind'] ?? null) ? substr($response['kind'], 0, 32) : '',
+            'elapsed_ms' => is_numeric($response['elapsed_ms'] ?? null) ? max(0, (int) $response['elapsed_ms']) : null];
     }
     error_log('CyberShield assistant unavailable; HTTP ' . $status . '.');
+    if ($status === 504 || $curlError === CURLE_OPERATION_TIMEDOUT) {
+        return ['ok' => false, 'status' => 504,
+            'error' => 'Le modèle n’a pas répondu dans le délai prévu. Utilise le bilan rapide ou pose une question plus courte.'];
+    }
     if ($status === 429) {
+        if (is_array($response) && ($response['error'] ?? '') === 'assistant_busy') {
+            return ['ok' => false, 'status' => 429, 'error' => 'Une analyse est déjà en cours. Attends sa réponse avant d’en envoyer une autre.'];
+        }
         return ['ok' => false, 'status' => 429, 'error' => 'Trop de questions rapprochées. Réessaie dans une minute.'];
     }
     return ['ok' => false, 'status' => 503, 'error' => $status === 0

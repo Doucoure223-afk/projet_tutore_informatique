@@ -3,6 +3,7 @@ require_once __DIR__ . '/hybrid_analyzer.php';
 require_once __DIR__ . '/logger.php';
 require_once __DIR__ . '/response_handler.php';
 require_once __DIR__ . '/ip_access.php';
+require_once __DIR__ . '/client_identity.php';
 
 function cybershield_rate_allowed(array $config, string $ip): bool
 {
@@ -66,14 +67,19 @@ function cybershield_protect(): void
     $requestId = bin2hex(random_bytes(16));
     $logger = null;
     $event = ['request_id' => $requestId, 'action' => 'ALLOWED', 'score' => 0, 'source' => 'heuristic', 'attack_type' => 'NONE'];
+    // Inference accounting is independent of the single final decision. A
+    // successful score-0 pre-screen must not disappear behind that decision.
+    $mlp = ['mlp_calls' => 0, 'mlp_attempts' => 0, 'mlp_failures' => 0, 'mlp_latency_ms' => 0.0];
     $status = 403;
     header('X-CyberShield: active');
+    header('X-CyberShield-Request-ID: ' . $requestId);
     header('X-Content-Type-Options: nosniff');
     header('X-Frame-Options: SAMEORIGIN');
     header('Referrer-Policy: same-origin');
     try {
         $logger = new SecurityLogger(rtrim($config['log_dir'], '/\\') . '/events.jsonl');
-        $clientIp = (string) ($_SERVER['REMOTE_ADDR'] ?? 'unknown');
+        $clientIp = cybershield_client_ip();
+        $event['ip'] = $clientIp;
         $ipAccess = new IpAccessControl($config['log_dir']);
         if ($ipAccess->isBlocked($clientIp)) {
             $event = array_merge($event, [
@@ -119,6 +125,7 @@ function cybershield_protect(): void
                 $withinAiBudget = $aiCalls < $config['max_ai_calls'];
                 $analysis = $analyzer->analyze($payload, $parameter, $context, $withinAiBudget, $withinAiBudget);
                 if ($analysis['needs_ai']) { $aiCalls++; }
+                cybershield_record_mlp_analysis($mlp, $analysis, $withinAiBudget);
                 if ($analysis['score'] > $event['score'] || $analysis['would_block']) {
                     $event = array_merge($event, $analysis, ['parameter' => $parameter, 'context' => $context,
                         'payload' => $analysis['score'] >= $config['review_threshold'] ? $payload : '']);
@@ -126,6 +133,8 @@ function cybershield_protect(): void
                 if ($analysis['would_block']) { break; }
             }
         }
+    } catch (CybershieldClientIdentityException $error) {
+        $event = array_merge($event, ['action' => 'BLOCKED', 'attack_type' => 'REQUEST_IDENTITY', 'source' => 'network_identity', 'reason' => 'Identité du relais réseau non authentifiée.']);
     } catch (LengthException $error) {
         $status = 413;
         $event = array_merge($event, ['action' => 'BLOCKED', 'attack_type' => 'REQUEST_SIZE', 'reason' => 'Entrée trop volumineuse ou trop complexe.']);
@@ -136,6 +145,7 @@ function cybershield_protect(): void
         error_log('CyberShield : protection indisponible (' . get_class($error) . ').');
         ResponseHandler::blockRequest('PROTECTION_UNAVAILABLE', '', $requestId, 503);
     }
+    $event = array_merge($event, $mlp);
     $event['latency_ms'] = (microtime(true) - $start) * 1000;
     try { $logger->logEvent($event); }
     catch (Throwable $error) {
@@ -146,5 +156,19 @@ function cybershield_protect(): void
     catch (Throwable $error) { error_log('CyberShield : rétention différée.'); }
     if (in_array($event['action'], ['BLOCKED', 'BLOCKED_BY_AI'], true)) {
         ResponseHandler::blockRequest($event['attack_type'], '', $requestId, $status);
+    }
+}
+
+/** Count actual successful predictions, attempts and failures without retaining inputs. */
+function cybershield_record_mlp_analysis(array &$telemetry, array $analysis, bool $withinBudget): void
+{
+    // A refused budget is not a call to the model. The policy remains unchanged.
+    if (!$withinBudget || empty($analysis['needs_ai'])) { return; }
+    $telemetry['mlp_attempts']++;
+    $telemetry['mlp_latency_ms'] += max(0.0, (float) ($analysis['latency_ms'] ?? 0));
+    if (($analysis['source'] ?? '') === 'mlp' && ($analysis['ai_status'] ?? '') === 'available' && isset($analysis['risk'])) {
+        $telemetry['mlp_calls']++;
+    } else {
+        $telemetry['mlp_failures']++;
     }
 }

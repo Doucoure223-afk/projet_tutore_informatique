@@ -1,0 +1,477 @@
+--- DIAPOSITIVE 1 ---
+1
+1
+MINISTERE DE L’ENSEIGNEMENT SUPERIEUR ET DE
+LA RECHERCHE SCIENTIFIQUE
+Projet tutoré informatique 09/06/2026 Année Académique 2024-2025
+Elaboré par  :
+Sekou DOUCOURE
+Adama Nakoun FANE
+MINI PROJET INFORMATIQUE
+Thème: Protection automatique des applications web contre l’attaque par injection SQL
+Tuteur:
+Dr.A. SIDIBE, MA
+REPUBLIQUE DU MALI
+UN PEUPLE-UN BUT-UNE FOI
+--- DIAPOSITIVE 2 ---
+2
+2
+Projet tutoré informatique 09/06/2026 Année Académique 2024-2025
+Sommaire
+1. Introduction
+2. État de l’art
+3. Solution Proposée
+4. Conclusion
+5. Perspectives
+--- DIAPOSITIVE 3 ---
+3
+3
+Projet tutoré informatique 09/06/2026 Année Académique 2024-2025
+Introduction
+Etat de l’art
+Solution Proposée
+Conclusion
+Perspectives
+Contexte &Problématique : Les limites des défenses actuelles
+Une menace persistante et évolutive:
+L’injection SQL (SQLi) domine le Top 10 OWASP
+Sophistication accrue des attaques : obfuscation et polymorphisme
+Le double écueil des solutions classiques :
+WAF traditionnels (Signatures statiques) : Taux élevé de faux négatifs face aux attaques inédites ("Zero-day").
+IA Monolithique : Latence computationnelle prohibitive dégradant l'expérience utilisateur.
+Problématique Centrale
+Comment optimiser la décision de sécurité sous contrainte de latence infra-milliseconde, tout en minimisant les Faux Positifs et Faux Négatifs
+--- DIAPOSITIVE 4 ---
+4
+4
+Projet tutoré informatique 09/06/2026 Année Académique 2024-2025
+Introduction
+Etat de l’art
+Solution Proposée
+Conclusion
+Perspectives
+Contexte &Problématique : Les limites des défenses actuelles
+Fig. 1.2 statistique injection SQL sur OWASP
+--- DIAPOSITIVE 5 ---
+5
+5
+Projet tutoré informatique 09/06/2026 Année Académique 2024-2025
+Introduction
+Etat de l’art
+Solution Proposée
+Conclusion
+Perspectives
+Objectifs & Hypothèses : Vers une défense intelligente
+Objectif Principal :
+Développer un middleware de sécurité capable de transformer une application vulnérable en un système résilient et auto-protecteur.
+Objectifs Spécifiques (Les 3 piliers) :
+Hybridation: Coupler l'analyse heuristique (vitesse) et le Machine Learning (profondeur).
+Fiabilité : Atteindre une précision maximale avec un taux de faux positifs < 1%
+Performance :Garantir une latence d'inférence infra-milliseconde.
+Hypothèse de recherche :
+L’utilisation d’un vecteur de caractéristiques sémantiques 𝜙𝑹  𝑝𝑒𝑟𝑚𝑒𝑡 𝑑𝑒 𝑑𝑒𝑡𝑒𝑐𝑡𝑒𝑟 𝑑𝑒𝑠 𝑎𝑡𝑡𝑎𝑞𝑢𝑒𝑠 𝑐𝑜𝑚𝑝𝑙𝑒𝑥𝑒𝑠 𝑧𝑒𝑟𝑜−𝑑𝑎𝑦que les signatures statiques ignorent
+--- DIAPOSITIVE 6 ---
+6
+6
+Projet tutoré informatique 09/06/2026 Année Académique 2024-2025
+Architecture Multi-tiers et Surface d’Exposition
+Introduction
+Etat de l’art
+Solution Proposée
+Conclusion
+Perspectives
+Modèle de Référence (3-Tiers) : Découplage strict entre la couche Présentation (Frontend), la couche Logique Métier (Middleware/Backend) et la couche de Persistance (SGBD).
+Couche d’Application (Serveur Web) : Point de traitement des requêtes HTTP/HTTPS où s’opère la transition entre les données non fiables (Input) et les instructions système.
+Couche de Données (SGBD MySQL) : Moteur d’exécution SQL garantissant l’intégrité transactionnelle, mais dépendant de la validité syntaxique des requêtes reçues.
+Vecteur de Communication : Utilisation de drivers (PDO/MySQLi) agissant comme interfaces de traduction entre le code applicatif et le langage SQL.
+Point de Rupture Sémantique : Identification du goulot d’étranglement sécuritaire lors de la construction dynamique des requêtes par concaténation de variables.
+--- DIAPOSITIVE 7 ---
+7
+7
+Projet tutoré informatique 09/06/2026 Année Académique 2024-2025
+Référentiel OWASP Top 10 : Standard mondial identifiant les vulnérabilités les plus critiques pour les applications web modernes.
+Source : OWASP Top 10 (2025) — Injection (réf. OWASP, 2025). : Catégorie incluant les injections SQL, NoSQL et OS. Risque majeur d'exfiltration et de corruption de données.
+Vecteurs Client-Side (XSS & CSRF) : Manipulation des scripts côté navigateur pour le vol de sessions (cookies) ou l'usurpation d'identité.
+A01:2025-Broken Access Control : Failles permettant un accès non autorisé à des fonctionnalités d'administration.
+RCE (Remote Code Execution) : Prise de contrôle totale du serveur par l'exécution de commandes système arbitraires.
+Justification du Focus : L'injection SQL demeure la menace n°1 en termes d'impact direct sur la confidentialité et l'intégrité des actifs stratégiques (BDD).
+Source : OWASP Top 10 (2025).
+Introduction
+Etat de l’art
+Solution Proposée
+Conclusion
+Perspectives
+Panorama des Risques Sécuritaires : L’Écosystème des Menaces
+--- DIAPOSITIVE 8 ---
+8
+8
+Projet tutoré informatique 09/06/2026 Année Académique 2024-2025
+Mécanisme de l’Injection SQL : Définition et Rupture de Paradigme
+Introduction
+Etat de l’art
+Solution Proposée
+Conclusion
+Perspectives
+Nature de la faille :Exploitation d'une validation insuffisante des entrées utilisateurs au sein de la couche de persistance.
+La Rupture Sémantique :Confusion critique opérée par le moteur SQL entre les instructions de contrôle (Code) et les données littérales (Input).
+--- DIAPOSITIVE 9 ---
+9
+9
+Projet tutoré informatique 09/06/2026 Année Académique 2024-2025
+Étude de Cas : Anatomie d'une Attaque par Tautologie
+Code Source Vulnérable (PHP) : Construction de requête par concaténation :
+Payload d'Attaque : Injection de la chaîne ‘OR 1=1 –  dans le champ "username".
+Requête Interprétée par le SGBD :
+Conséquence Technique: Les caractères --  Commentent la suite de la requête, ignorant la verification du mots de passe.
+Résultat: La condition 1=1 étant toujours vraie (tautologie), l'accès est accordé à l'attaquant sans identifiants valides.
+Introduction
+Etat de l’art
+Solution Proposée
+Conclusion
+Perspectives
+$sql = "SELECT * FROM users WHERE user = '" . $user . "' AND pass = '" . $pass . “’”;
+SELECT * FROM users WHERE user = '' OR 1=1 --' AND pass = '...’;
+--- DIAPOSITIVE 10 ---
+10
+10
+Projet tutoré informatique 09/06/2026 Année Académique 2024-2025
+Étude de Cas : Anatomie d'une Attaque par Tautologie
+Introduction
+Etat de l’art
+Solution Proposée
+Conclusion
+Perspectives
+SELECT *  FROM users WHERE username = 'user1’
+AND password = 'user@123';
+SELECT *  FROM users WHERE username = 'user1’
+AND password =‘’  OR 1=1 – ;
+--- DIAPOSITIVE 11 ---
+11
+11
+Projet tutoré informatique 09/06/2026 Année Académique 2024-2025
+Étude de Cas : Anatomie d'une Attaque par Tautologie
+Cette étude de cas montre clairement comment une requête SQL vulnérable peut être détournée par une injection de type tautologie. Dans le premier exemple, l’application vérifie normalement les identifiants saisis. Mais dans le second, l’ajout de l’expression OR 1=1 rend la condition toujours vraie et permet de contourner l’authentification. Ce scénario illustre la simplicité et la gravité d’une attaque par injection SQL : une seule ligne mal protégée suffit à compromettre la sécurité. La leçon à retenir est qu’il est indispensable d’utiliser des requêtes préparées et des mécanismes de validation pour éviter que des données utilisateur ne soient interprétées comme du code.
+Introduction
+Etat de l’art
+Solution Proposée
+Conclusion
+Perspectives
+--- DIAPOSITIVE 12 ---
+12
+12
+Projet tutoré informatique 09/06/2026 Année Académique 2024-2025
+Classification et Taxonomie des Injections SQL
+In-Band SQLi (Classique) : L'attaquant utilise le même canal de communication pour lancer l'attaque et récupérer les résultats.
+Union-based: Utilise l'opérateur UNION pour fusionner les résultats de la
+requête légitime avec une requête malveillante.
+Error-based :Exploite les messages 'erreur du SGBD pour obtenir des informations sur la structure de la base.
+Inferential SQLi (Blind / Aveugle) :  Aucune donnée n'est transférée directement. L'attaquant reconstruit la base en posant des questions "Vrai/Faux".
+Boolean-based :Analyse la différence de contenu dans la réponse HTTP.
+Time-based :Analyse les délais de réponse (ex: WAITFORDELAY ou SLEEP())
+Out-of-Band SQLi :Utilisation de protocoles externes (DNS, HTTP) pour exfiltrer les données si le canal direct est filtré.
+Introduction
+Etat de l’art
+Solution Proposée
+Conclusion
+Perspectives
+--- DIAPOSITIVE 13 ---
+13
+13
+Projet tutoré informatique 09/06/2026 Année Académique 2024-2025
+Classification et Taxonomie des Injections SQL
+Introduction
+Etat de l’art
+Solution Proposée
+Conclusion
+Perspectives
+Type d’attaque
+Visibilité des erreurs
+Complexité
+Vitesse d’extraction
+Niveau de discrétion
+Pertinence 2026
+Error-based
+Élevée
+Faible
+Rapide
+Faible
+Moyenne
+Boolean-based
+Nulle
+Moyenne
+Moyenne
+Moyenne
+Élevée
+Time-based
+Nulle
+Élevée
+Lente
+Élevée
+Très Élevée
+Second-order
+Variable
+Élevée
+Différée
+Élevée
+Très Élevée
+API/ORM-based
+Variable
+Élevée
+Variable
+Très Élevée
+Critique
+--- DIAPOSITIVE 14 ---
+14
+14
+Projet tutoré informatique 09/06/2026 Année Académique 2024-2025
+Limites des Mécanismes de Défense Conventionnels
+Signatures Statiques (WAF classiques) : Incapacité structurelle à détecter les menaces « Zero-day » (attaques inédites non répertoriées).
+Techniques d’Évasion et d’Obfuscation : Contournement facile des filtres par l'utilisation d'encodages (Hexadécimal, URL encoding) ou de commentaires SQL, imbriqués.
+Le Dilemme de la Précision :
+Faux Positifs: Blocage des requête légitimes( ex: noms contenant une apostrophe: N’DIAYE, N’DAOU, N’GOLO ), nuisant à l’expérience utilisateur.
+Faux Négatifs : Fuite de sécurité laissant passer des payloads sophistiqués.
+Complexité de maintenance: Nécessité d'une mise à jour constante des bases de signatures face à l'évolution rapide des payloads.
+Latence de Traitement : Dégradation des performances lors de l'analyse de règles de filtrage trop denses.
+Introduction
+Etat de l’art
+Solution Proposée
+Conclusion
+Perspectives
+--- DIAPOSITIVE 15 ---
+15
+15
+Projet tutoré informatique 09/06/2026 Année Académique 2024-2025
+Une Architecture hybride combinant heuristique et intelligence artificielle
+Objectif : Protéger les applications web contre les injections SQL en combinant la rapidité d’un moteur heuristique et précision d’un réseau de neurones(MLP).
+Principe :
+Filtrage heuristique en première ligne pour bloquer instantanément les attaques connues.
+Analyse par IA uniquement pour les requêtes suspectes («zones grises »), minimisant la latence.
+Avantage:
+Taux de détection élevé(<99%)
+Faible taux de faux positifs
+Temps de réponse infra-milliseconde
+Introduction
+Etat de l’art
+Solution Proposée
+Conclusion
+Perspectives
+--- DIAPOSITIVE 16 ---
+16
+16
+Projet tutoré informatique 09/06/2026 Année Académique 2024-2025
+ArchitectureHybride : SynergieentreHeuristiqueetIA
+Vision conceptuelle du pipeline de sécurité hybride
+Paradigme de Défense en Profondeur : Combinaison d'un filtrage déterministe (Heuristique) et d'une analyse probabiliste (IA)
+Moteur Heuristique (Ligne de front) : Analyse par signatures et motifs SQL pour un blocage instantané des menaces connues.
+Module IA (Analyse Prédictive) : Recours au réseau de neurones MLP pour traiter les attaques "Zero-day" et les payloads obfusqués.
+Optimisation de la Charge : Inférence neuronale sélective limitée aux requêtes suspectes ("Zones grises") pour préserver les ressources.
+Objectif de Résilience : Maximisation du taux de détection tout en maintenant une latence infra-milliseconde.
+Introduction
+Etat de l’art
+Solution Proposée
+Conclusion
+Perspectives
+--- DIAPOSITIVE 17 ---
+17
+17
+Projet tutoré informatique 09/06/2026 Année Académique 2024-2025
+ArchitectureHybride : SynergieentreHeuristiqueetIA
+Composants du Système : Déploiement d'une architecture distribuée entre le serveur d'application (PHP) et le moteur d'analyse (Python).
+Le Middleware de Sécurité : Point central d'interception agissant comme un "proxy" interne entre l'application et le SGBD
+Module IA Déporté : Utilisation d'une API Flask pour isoler la logique de détection et permettre une scalabilité du modèle.
+Journalisation (Logs) : Système de traçabilité intégré pour l'audit des tentatives d'intrusion et l'amélioration continue du dataset.
+Flux de Décision : Communication bidirectionnelle pour valider la requête avant sa persistance dans MySQL 8.0.
+Introduction
+Etat de l’art
+Solution Proposée
+Conclusion
+Perspectives
+--- DIAPOSITIVE 18 ---
+18
+18
+Projet tutoré informatique 09/06/2026 Année Académique 2024-2025
+Logigramme de Décision et Gestion de la Zone Grise
+Introduction
+Etat de l’art
+Solution Proposée
+Conclusion
+Perspectives
+--- DIAPOSITIVE 19 ---
+19
+19
+Projet tutoré informatique 09/06/2026 Année Académique 2024-2025
+Logigramme de Décision et Gestion de la Zone Grise
+Règle de décision hybride : score_ajusté ≥ 80 → BLOQUER ; 30 ≤ score_ajusté < 80 → DÉLÉGUER À IA ; score_ajusté < 30 → AUTORISER.
+Pondérations par contexte : login=1.3, admin=1.5, search=1.1.
+Exemple chiffré (mini-cas) :
+URL: https://mon-app.ml/login?user=admin' UNION SELECT 1,2,3–
+pattern 'UNION' (+40) + caractère spécial (+25) + entropie (+20) => score brut = 85 → score_ajusté (contexte login=1.3) = 85 * 1.3 = 110.5 → DÉCISION = BLOQUER.
+Introduction
+Etat de l’art
+Solution Proposée
+Conclusion
+Perspectives
+--- DIAPOSITIVE 20 ---
+20
+20
+Projet tutoré informatique 09/06/2026 Année Académique 2024-2025
+Casd’Utilisation : InteractionsetSupervisionduSystème
+Introduction
+Etat de l’art
+Solution Proposée
+Conclusion
+Perspectives
+Trilogie d'Acteurs :
+Utilisateur Légitime & Attaquant : Déclencheurs des flux d'analyse (accès applicatif).
+Administrateur SecOps : Pilotage stratégique et réponse aux incidents.
+Module de Détection (Temps Réel) :
+Automatisation du blocage pour les risques avérés >80
+Branchement conditionnel (<<extend>>) vers l’IA pour la levée de doute en zon grise
+Module de Supervision (Audit & Contrôle) :
+Gestion proactive (White/Black lists IP).
+Reporting avec un Reportions pour la visualisation des tentatives d’intrusion
+--- DIAPOSITIVE 21 ---
+21
+21
+Projet tutoré informatique 09/06/2026 Année Académique 2024-2025
+Diagramme de sequence: InteractionsetSupervisionduSystème
+Introduction
+Etat de l’art
+Solution Proposée
+Conclusion
+Perspectives
+--- DIAPOSITIVE 22 ---
+22
+22
+Projet tutoré informatique 09/06/2026 Année Académique 2024-2025
+Environnement de Travail et Stack Technologique
+Environnement de Développement (Software) :
+VS Code :IDE principal pour le développement Full-Stack.
+Git / GitHub :Gestion de version et collaboration.
+Postman : Tests unitaires et validation des endpoints de l'API Flask.
+Stack Technologique (Backend & Sécurité) :
+PHP 8.2 :Implémentation du Middleware et de l'application web.
+Python (Flask) :Micro-framework dédié à l'exposition du modèle MLP.
+Scikit-Learn : Entraînement et sérialisation du réseau de neurones.
+Gestion des Données :
+MySQL 8.0 :Système de Gestion de Bases de Données (SGBD) cible.
+Dataset :Corpus de plus de 50 000 requêtes SQL (légitimes et injectées).
+Introduction
+Etat de l’art
+Solution Proposée
+Conclusion
+Perspectives
+--- DIAPOSITIVE 23 ---
+23
+23
+Projet tutoré informatique 09/06/2026 Année Académique 2024-2025
+Développement du modèle prédictif(MLP)
+Dataset & Prétraitement : Nettoyage d'un corpus de 50 000 requêtes et équilibrage des classes (Saines vs Malveillantes).
+Features Engineering (𝜙(𝑹)) : Extraction de 11 caractéristiques discriminantes :
+Syntaxiques: Présence de ‘, --, ;, /*.
+Sémantiques : Mots-clés SQL( UNION, SELECT, OR, SLEEP).
+Statistiques :  Longueur de la requête et taux de caractères spéciaux.
+Architecture du Réseau (MLP) :
+Couche d'entrée : 11 neurones (un par feature).
+Couches cachées : Architecture dense ( ex: 11 x 64 x 32).
+Fonctions d'activation : ReLU pour les couches internes, Sigmoid pour la sortie.
+Optimisation : Utilisation de l'algorithme Adam et de la fonction de perte Binary Cross-Entropy.
+Introduction
+Etat de l’art
+Solution Proposée
+Conclusion
+Perspectives
+--- DIAPOSITIVE 24 ---
+24
+24
+Projet tutoré informatique 09/06/2026 Année Académique 2024-2025
+Développement du modèle prédictif(MLP)
+Introduction
+Etat de l’art
+Solution Proposée
+Conclusion
+Perspectives
+tableau des 11 features
+Diagramme du réseau de neurones
+--- DIAPOSITIVE 25 ---
+25
+25
+Projet tutoré informatique 09/06/2026 Année Académique 2024-2025
+Analyse des Résultats et Validation Statistique
+Indicateurs de Performance (Basés sur 10 000 tests) :
+Dataset : 50 000 requêtes (mix logs réels + injections synthétiques).
+Jeu de validation : 10 000 requêtes (5 000 saines / 5 000 malveillantes).
+Résultats clés : Accuracy ≈ 99.63% ; F1 = 0.9963 ;
+Faux négatifs observés : 12/5000 (tests),
+Introduction
+Etat de l’art
+Solution Proposée
+Conclusion
+Perspectives
+Précision Globale (Accuracy) : 99,63 % – Un taux d'erreur extrêmement faible(<0,4%)
+Analyse de la Matrice de Confusion :
+Vrais Négatifs (VN) :4 975 requêtes saines correctement identifiées.
+Vrais Positifs (VP) :4 988 attaques bloquées avec succès.
+Fiabilité du Modèle :
+Faux négatifs (FN) : Seulement 12 attaques manquées (Risque résiduel minime).
+Faux Positifs (FP) :25 alertes injustifiées (Impact négligeable sur l'expérience utilisateur).
+Score de Rappel (Recall) :99,76 % – Capacité quasi-totale à détecter les injections SQL, même complexes ou obfusquées.
+--- DIAPOSITIVE 26 ---
+26
+26
+Projet tutoré informatique 09/06/2026 Année Académique 2024-2025
+Validation par Stress Test : Confrontation à SQLMap
+Protocole d'Attaque (Pentest)
+Outil : SQLMap v1.8.2 (Référence mondiale en injection SQL).
+Vecteurs testés : Blind SQLi, Error-based, Union-based, Stacked queries.
+Configuration : Niveau d'agression maximum(--level 5 --risk 3)
+Introduction
+Etat de l’art
+Solution Proposée
+Conclusion
+Perspectives
+Commande utilisée (ex.) :
+sqlmap -u "http://127.0.0.1/projet_tutoré_inf/app/login.php" --data="username=admin&password=test&_token=PLACEHOLDER" -p username --cookie="PHPSESSID=..." --batch --level=5 --risk=3 --dbs
+--- DIAPOSITIVE 27 ---
+27
+27
+Projet tutoré informatique 09/06/2026 Année Académique 2024-2025
+Démonstration !
+Introduction
+Etat de l’art
+Solution Proposée
+Conclusion
+Perspectives
+--- DIAPOSITIVE 28 ---
+28
+28
+Projet tutoré informatique 09/06/2026 Année Académique 2024-2025
+Conclusion : Un Nouveau Standard de Protection SQLi
+Synthèse des Réalisations :
+Validation du Paradigme Hybride :Preuve qu'une architecture en cascade (Heuristique + MLP) surpasse les systèmes traditionnels.
+Performance et Précision :Atteinte d'un taux de détection de 99,63% avec un risque de faux négatifs quasi nul (0,24%).
+Efficience Opérationnelle :Optimisation du temps de traitement par l'IA, sollicitée uniquement pour les "Zones Grises".
+Solution Industrielle :Développement d'un middleware robuste, prêt à être intégré dans des écosystèmes PHP/MySQL existants.
+--- DIAPOSITIVE 29 ---
+29
+29
+Projet tutoré informatique 09/06/2026 Année Académique 2024-2025
+Perspectives : Vers une Défense Multi-Vectorielle
+Évolutions à court terme :
+Élargissement du Spectre :Adaptation du moteur pour contrer les autres vulnérabilités de l'OWASP Top 10 (XSS, CSRF, Injections de commandes).
+Conteneurisation (Docker/K8s) : Faciliter le déploiement à grande échelle via une architecture de micro-services.
+Évolutions à long terme :
+Apprentissage en Continu (Online Learning) :Mise en place d'un pipeline de réentraînement automatique basé sur les nouveaux logs d'attaques.
+Deep Learning Avancé :Exploration des modèles de type LSTM ou Transformers pour analyser la séquence temporelle des requêtes SQL.
+Dashboarding Prédictif :Interface de monitoring capable d'anticiper des campagnes d'attaques massives.
+Introduction
+Conception
+Développements
+Conclusion
+Perspectives
+--- DIAPOSITIVE 30 ---
+30
+30
+Projet tutoré informatique 09/06/2026 Année Académique 2024-2025
+Questions
+Merci de votre attention.

@@ -1,16 +1,12 @@
 <?php
 declare(strict_types=1);
+require_once __DIR__ . '/../security/tls-request.php';
+cybershield_require_secure_transport();
 
 if (session_status() === PHP_SESSION_NONE) {
     ini_set('session.use_strict_mode', '1');
     ini_set('session.use_only_cookies', '1');
-    session_set_cookie_params([
-        'lifetime' => 0,
-        'path' => '/',
-        'secure' => !empty($_SERVER['HTTPS']) && strtolower((string) $_SERVER['HTTPS']) !== 'off',
-        'httponly' => true,
-        'samesite' => 'Lax',
-    ]);
+    session_set_cookie_params(RequestTransport::cookieOptions());
     session_start();
 }
 if (!empty($_SESSION['last_activity']) && time() - (int) $_SESSION['last_activity'] > 1800) {
@@ -83,7 +79,7 @@ function execute_query_secure(string $sql, array $params = []) {
 
 function log_user_action(int $userId, string $action): void {
     execute_query_secure('INSERT INTO user_logs (user_id, action, ip_address) VALUES (?, ?, ?)',
-        [$userId, $action, $_SERVER['REMOTE_ADDR'] ?? '']);
+        [$userId, $action, cybershield_client_ip()]);
 }
 
 function establish_user_session(array $user): void {
@@ -96,7 +92,7 @@ function establish_user_session(array $user): void {
     $_SESSION['logged_in'] = true;
     $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
     unset($_SESSION['pending_admin_mfa_id'], $_SESSION['pending_admin_mfa_started'], $_SESSION['pending_admin_mfa_secret']);
-    log_user_action((int) $user['id'], 'Connexion réussie avec second facteur');
+    log_user_action((int) $user['id'], ($user['role'] ?? '') === 'admin' ? 'Connexion réussie avec second facteur' : 'Connexion réussie');
 }
 
 function current_user(): ?array {

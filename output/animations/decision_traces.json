@@ -1,0 +1,131 @@
+{
+  "schema_version": 1,
+  "checked_date": "2026-10-16",
+  "purpose": "Fictional, local teaching animations. Classification only; no SQL execution and no middleware or logger invoked.",
+  "sources": {
+    "rule_detector": "security/detector.php",
+    "hybrid_decision": "security/hybrid_analyzer.php",
+    "request_enforcement": "security/middleware.php",
+    "block_response": "security/response_handler.php",
+    "rule_config": "config/security.php",
+    "mlp_config": "config/ai.php",
+    "mlp_service": "ia/service.py",
+    "mlp_features": "ia/features.py",
+    "prepared_search": "app/search.php:6"
+  },
+  "configuration": {
+    "local_env_mode": "monitor",
+    "runtime_mode": "unverified; Docker engine unavailable during read-only audit",
+    "animation_mode": "block (explicit fictional scenario)",
+    "rule_block_threshold": 80,
+    "rule_review_threshold": 30,
+    "mlp_block_threshold": 0.75,
+    "mlp_score_kind": "uncalibrated_class_score",
+    "mlp_model_version": "cybershield-mlp-httpparams-v2",
+    "feature_schema": "sqli-features-v1",
+    "model_sklearn_version": "1.7.2"
+  },
+  "rules_example": {
+    "payload": "' OR 1=1 -- ",
+    "rule_result_verified": true,
+    "score": 90,
+    "patterns": [
+      "NUMERIC_BOOLEAN"
+    ],
+    "needs_ai": false,
+    "would_block": true,
+    "mode_block": {
+      "action": "BLOCKED",
+      "decision": "BLOCK",
+      "source": "heuristic",
+      "ai_status": "not_requested",
+      "risk": null
+    },
+    "mode_monitor": {
+      "action": "MONITORED",
+      "decision": "ALLOW",
+      "source": "heuristic",
+      "ai_status": "not_requested",
+      "risk": null
+    },
+    "http_status_in_block_mode": 403
+  },
+  "ambiguous_example": {
+    "payload": "' OR 'b' > 'a' -- ",
+    "rule_result_verified": true,
+    "score": 60,
+    "patterns": [
+      "QUOTE_COMMENT"
+    ],
+    "needs_ai": true,
+    "would_block_from_rules_alone": false,
+    "mlp_inference_verified": false,
+    "mlp_risk": null,
+    "mlp_branch": "If returned risk >=0.75, action BLOCKED_BY_AI in block mode; otherwise ALLOWED and prepared database query.",
+    "http_status_if_blocked": 403,
+    "reason_no_numeric_prediction": "Docker unavailable and host sklearn differs from version expected by saved model; no fabricated prediction."
+  },
+  "vulnerable_sql_illustration": {
+    "executed": false,
+    "table_and_columns": "Fictional demonstration schema, not a live project query",
+    "template": "SELECT id, nom FROM produits WHERE nom = '<saisie>';",
+    "with_payload": "SELECT id, nom FROM produits WHERE nom = '' OR 1=1 -- ';",
+    "explanation": "In a compatible SQL parser, the concatenated value can change the WHERE condition and comment the suffix. The visible consequence is only an illustrative unauthorized expansion of a result set, not a claim of authentication bypass or full compromise."
+  },
+  "scenes": [
+    {
+      "id": "vulnerable",
+      "title": "Site vulnérable : la saisie devient du SQL",
+      "beats": [
+        "Saisie fictive dans un formulaire",
+        "Transport de la requête HTTP vers l’application",
+        "Concaténation naïve de la saisie dans le texte SQL",
+        "Le texte modifié atteint la base de démonstration",
+        "Le résultat peut être élargi au-delà de la recherche attendue"
+      ],
+      "caption": "Simulation pédagogique ; aucune requête SQL exécutée."
+    },
+    {
+      "id": "rules",
+      "title": "CyberShield : une signature suffit",
+      "beats": [
+        "La même saisie arrive au middleware PHP avant la requête SQL",
+        "Normalisation puis reconnaissance de NUMERIC_BOOLEAN",
+        "Score règles 90 / 100 ≥ seuil 80",
+        "Arrêt en mode blocage : HTTP 403 ; journal de sécurité",
+        "La base n’est pas sollicitée ; le MLP et le LLM ne sont pas appelés"
+      ],
+      "caption": "Scénario en mode blocage. En observation, l’événement est consigné et l’application continue avec des requêtes préparées."
+    },
+    {
+      "id": "mlp",
+      "title": "CyberShield : un cas ambigu est évalué",
+      "beats": [
+        "Une seconde saisie fictive atteint le middleware",
+        "Signature QUOTE_COMMENT : score règles 60 / 100, donc analyse requise",
+        "Extraction de caractéristiques et normalisation par StandardScaler",
+        "MLP local 128 → 64 → 32 produit un score non calibré",
+        "Condition visible : si score ≥ 0,75, arrêt HTTP 403 et journal ; sinon autorisation vers une requête préparée"
+      ],
+      "caption": "Parcours conditionnel : aucune prédiction numérique du MLP n’a été mesurée pour cet exemple. Le LLM reste hors du chemin de décision."
+    }
+  ],
+  "notes": [
+    "Rule scores are heuristics, neither probability nor confidence.",
+    "Rule evidence is combined by maximum, not by sum.",
+    "The real middleware may also call a bounded MLP pre-screen on early nonsensitive request values even without a PHP signature.",
+    "The saved MLP has architecture (128,64,32), ReLU, binary output; its score must not be called a calibrated attack probability.",
+    "An unavailable required AI analysis triggers fail_safe, distinct from a positive MLP inference.",
+    "Prepared SQL statements remain the primary database injection defense even if detection misses a payload.",
+    "Never imply a security guarantee or a generalization score from this illustration.",
+    "Sensitive credentials and one-time codes are excluded from model inference in the middleware.",
+    "LLM assistant is advisory/read-only and outside the request-blocking path."
+  ],
+  "source_sha256": {
+    "security/detector.php": "7510483b556d4644feaf6e79984b9c3aaadd0b6082510e5b944fb75cb2e400df",
+    "security/hybrid_analyzer.php": "aa5fa1a6d2311d5ad8463871dc920bb8f9042a56d9aad173c393c89d8027258a",
+    "security/middleware.php": "d9f169dfe196c290fe16bbfc146ce70367e5b1ce1f7766b56f1277f348c00007",
+    "ia/service.py": "479afd44f3554edd4ddca857e05fa92e317a6c4eae6feaa49974a1be1b8f6ce6",
+    "ia/models/model.joblib": "94777a563f51f7c357743afb2c257d0fcddbc79f3bd17d3484feab92fa38cb2e"
+  }
+}

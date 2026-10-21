@@ -4,12 +4,17 @@ $secretDirectory = Join-Path $projectRoot 'secrets'
 
 New-Item -ItemType Directory -Force -Path $secretDirectory | Out-Null
 
-# Restrict this webroot subdirectory to the current Windows user and system admins.
-$identity = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name
-& icacls $secretDirectory /inheritance:r /grant:r `
-    "${identity}:(OI)(CI)F" `
-    '*S-1-5-18:(OI)(CI)F' `
-    '*S-1-5-32-544:(OI)(CI)F' | Out-Null
+$runningOnWindows = [System.Runtime.InteropServices.RuntimeInformation]::IsOSPlatform([System.Runtime.InteropServices.OSPlatform]::Windows)
+if ($runningOnWindows) {
+    # Restrict this webroot subdirectory to the current Windows user and system admins.
+    $identity = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name
+    & icacls $secretDirectory /inheritance:r /grant:r `
+        "${identity}:(OI)(CI)F" `
+        '*S-1-5-18:(OI)(CI)F' `
+        '*S-1-5-32-544:(OI)(CI)F' | Out-Null
+} else {
+    & chmod 700 $secretDirectory
+}
 if ($LASTEXITCODE -ne 0) { throw 'Impossible de protéger les permissions du dossier des secrets.' }
 
 function New-SecretFile([string] $path, [int] $minimumLength = 32) {
@@ -17,6 +22,7 @@ function New-SecretFile([string] $path, [int] $minimumLength = 32) {
         if ((Get-Item -LiteralPath $path).Length -lt $minimumLength) {
             throw "Le secret existant est trop court : $path. Remplacez-le manuellement avant de continuer."
         }
+        if (-not $runningOnWindows) { & chmod 600 $path; if ($LASTEXITCODE -ne 0) { throw 'Impossible de protéger un fichier secret.' } }
         return
     }
     $bytes = [byte[]]::new(48)
@@ -24,6 +30,7 @@ function New-SecretFile([string] $path, [int] $minimumLength = 32) {
     try { $generator.GetBytes($bytes) } finally { $generator.Dispose() }
     $secret = [Convert]::ToBase64String($bytes).TrimEnd('=').Replace('+', '-').Replace('/', '_')
     [System.IO.File]::WriteAllText($path, $secret, [System.Text.Encoding]::ASCII)
+    if (-not $runningOnWindows) { & chmod 600 $path; if ($LASTEXITCODE -ne 0) { throw 'Impossible de protéger un fichier secret.' } }
 }
 
 New-SecretFile (Join-Path $secretDirectory 'db_root_password.txt')
@@ -36,7 +43,8 @@ if (-not (Test-Path -LiteralPath $environmentFile)) {
     Copy-Item -LiteralPath (Join-Path $projectRoot '.env.example') -Destination $environmentFile
 }
 $environmentText = Get-Content -LiteralPath $environmentFile -Raw
-$modelCache = if ($env:OLLAMA_MODELS) { $env:OLLAMA_MODELS } else { Join-Path $env:USERPROFILE '.ollama\models' }
+$userProfile = [Environment]::GetFolderPath([Environment+SpecialFolder]::UserProfile)
+$modelCache = if ($env:OLLAMA_MODELS) { $env:OLLAMA_MODELS } else { Join-Path $userProfile '.ollama\models' }
 $modelCache = $modelCache.Replace('\', '/')
 if ($environmentText -notmatch '(?m)^\s*OLLAMA_MODELS_PATH=') {
     Add-Content -LiteralPath $environmentFile -Value "OLLAMA_MODELS_PATH=$modelCache"
@@ -45,7 +53,7 @@ if ($environmentText -notmatch '(?m)^\s*OLLAMA_MODELS_PATH=') {
     [System.IO.File]::WriteAllText($environmentFile, $environmentText, [System.Text.UTF8Encoding]::new($false))
 }
 if ($environmentText -notmatch '(?m)^\s*CYBERSHIELD_ASSISTANT_MODEL=') {
-    Add-Content -LiteralPath $environmentFile -Value 'CYBERSHIELD_ASSISTANT_MODEL=qwen2.5:7b-instruct'
+    Add-Content -LiteralPath $environmentFile -Value 'CYBERSHIELD_ASSISTANT_MODEL=llama3.2:latest'
 }
 
 Write-Output 'Secrets locaux créés ou conservés; leurs valeurs ne sont pas affichées.'

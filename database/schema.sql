@@ -50,8 +50,8 @@ CREATE TABLE IF NOT EXISTS user_logs (
   CONSTRAINT fk_cybershield_user_logs_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Table historique conservée pour compatibilité. Le parcours actuel produit
--- uniquement un reçu de simulation en session ; aucun paiement réel.
+-- Table historique conservée pour compatibilité. Les nouvelles commandes
+-- utilisent les tables commerce_* de la migration additive orders.sql.
 CREATE TABLE IF NOT EXISTS orders (
   id INT UNSIGNED NOT NULL AUTO_INCREMENT,
   user_id INT UNSIGNED NOT NULL,

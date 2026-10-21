@@ -50,6 +50,29 @@ function app_token(array $response): string {
     }
     return $matches[1];
 }
+function app_checkout_token(array $response): string {
+    if (!preg_match('/name="checkout_token" value="([a-f0-9]{64})"/', $response['body'], $matches)) {
+        throw new RuntimeException('Jeton de commande absent');
+    }
+    return $matches[1];
+}
+function app_oversized_path_status(string $root, array $environment): int {
+    // Le serveur PHP intégré rejette les lignes HTTP > 8 Ko avant le middleware.
+    // Exercer ce cas dans PHP évite de confondre sa limite avec celle de l'application.
+    $code = 'register_shutdown_function(static function () { echo "\nHTTP_STATUS:" . http_response_code(); });'
+        . '$_SERVER["REQUEST_METHOD"]="GET"; $_SERVER["REMOTE_ADDR"]="127.0.0.1";'
+        . '$_SERVER["HTTP_ACCEPT"]="application/json"; $_SERVER["REQUEST_URI"]="/app/search.php/".str_repeat("a",8193);'
+        . 'require ' . var_export($root . '/security/bootstrap.php', true) . ';';
+    $process = proc_open([PHP_BINARY, '-r', $code], [0 => ['pipe', 'r'], 1 => ['pipe', 'w'], 2 => ['pipe', 'w']], $pipes, $root, $environment, ['bypass_shell' => true]);
+    if (!is_resource($process)) { throw new RuntimeException('Sous-processus de taille de chemin indisponible.'); }
+    fclose($pipes[0]);
+    $output = stream_get_contents($pipes[1]); fclose($pipes[1]);
+    $errors = stream_get_contents($pipes[2]); fclose($pipes[2]);
+    if (proc_close($process) !== 0 || !preg_match('/HTTP_STATUS:(\d+)$/', $output, $matches)) {
+        throw new RuntimeException('Contrôle du chemin long impossible : ' . $errors);
+    }
+    return (int) $matches[1];
+}
 try {
     $host = getenv('DB_HOST') ?: '127.0.0.1';
     $user = getenv('DB_USER') ?: 'root';
@@ -65,6 +88,7 @@ try {
     import_app_sql($db, $schema);
     import_app_sql($db, $seed);
     $db->select_db($database);
+    import_app_sql($db, file_get_contents($root . '/database/orders.sql'));
     $db->query('UPDATE products SET price = 7.50, stock = 2 WHERE id = 1');
     import_app_sql($db, $schema);
     import_app_sql($db, $seed);
@@ -97,6 +121,7 @@ try {
         catch (RuntimeException $e) { usleep(100000); }
     }
     check_app($ready && $response['status'] === 200, 'Catalogue HTTP disponible');
+    check_app(str_contains($response['body'], 'FCFA') && !preg_match('/€|&euro;|\bEUR\b/u', $response['body']), 'Catalogue affiche uniquement les prix en FCFA');
     require_once $root . '/security/ip_access.php';
     $testIpPolicy = new IpAccessControl($directory);
     $testIpPolicy->addRule('127.0.0.1', 'middleware integration');
@@ -110,13 +135,14 @@ try {
     $pathPayload = rawurlencode("' OR '1'='1 --");
     check_app(app_request('/app/search.php/' . $pathPayload)['status'] === 403, 'Injection SQLi dans le chemin URL bloquee');
     check_app(app_request('/app/search.php?q=%27a%27%3D%27a%27')['status'] === 403, 'Preselection MLP bloque une injection sans signature PHP');
-    check_app(app_request('/app/search.php/' . str_repeat('a', 8193))['status'] === 413, 'Chemin URL trop long refuse');
+    check_app(app_oversized_path_status($root, $environment) === 413, 'Chemin URL trop long refuse par le middleware');
     check_app(app_request('/app/panier.php', ['action' => 'add', 'product_id' => '1'])['status'] === 403, 'Ajout sans CSRF refuse');
     $response = app_request('/app/panier.php?add=1&validated=1');
-    check_app(str_contains($response['body'], 'Votre panier est vide') && !str_contains($response['body'], 'Simulation terminée'), 'GET ne modifie pas le panier ni le recu');
+    check_app(str_contains($response['body'], 'Votre panier est vide') && (int) $db->query('SELECT COUNT(*) FROM commerce_orders')->fetch_row()[0] === 0, 'GET ne modifie ni le panier ni les commandes');
     for ($i = 0; $i < 3; $i++) { app_request('/app/panier.php', ['action' => 'add', 'product_id' => '1', 'csrf_token' => $token]); }
     $response = app_request('/app/panier.php');
-    check_app(str_contains($response['body'], '× 2') && str_contains($response['body'], '15,00'), 'Stock limite a deux et total correct');
+    check_app(str_contains($response['body'], '<span aria-label="Quantité">2</span>') && str_contains($response['body'], '9 840 FCFA'), 'Stock limite a deux et total FCFA correct');
+    check_app(!preg_match('/€|&euro;|\bEUR\b/u', $response['body']), 'Panier ne montre ni euros ni seconde devise');
     $response = app_request('/app/login.php', ['username' => "' OR 1=1 -- ", 'password' => 'anything', 'csrf_token' => $token]);
     check_app(in_array($response['status'], [200, 403], true) && !str_contains($response['url'], 'dashboard.php'), 'Injection login ne connecte pas');
     $response = app_request('/app/inscription.php', ['username' => 'registered_test', 'password' => 'NewPassword!2026', 'mail' => 'new@test.invalid', 'role' => 'admin', 'csrf_token' => $token]);
@@ -130,13 +156,52 @@ try {
     check_app(app_request('/app/dashboard.php?admin_search=test')['status'] === 403, 'Recherche admin refusee au client');
     $response = app_request('/app/paiement.php');
     $token = app_token($response);
-    check_app(str_contains($response['body'], '15,00') && !str_contains($response['body'], 'name="card"'), 'Simulation affiche total et ne collecte aucune carte');
-    check_app(app_request('/app/paiement.php', ['pay' => '1'])['status'] === 403, 'Simulation sans CSRF refusee');
-    check_app(app_request('/app/paiement.php', ['validate_without_pay' => '1', 'csrf_token' => $token])['status'] === 403, 'Privilege de simulation admin controle cote serveur');
-    $response = app_request('/app/paiement.php', ['pay' => '1', 'csrf_token' => $token]);
-    check_app(str_contains($response['body'], 'Simulation terminée') && str_contains($response['body'], 'DEMO-'), 'Recu authentique apres simulation');
-    check_app(!str_contains(app_request('/app/panier.php?validated=1')['body'], 'Simulation terminée'), 'Recu a usage unique');
-    check_app((int) $db->query('SELECT COUNT(*) FROM orders')->fetch_row()[0] === 0 && (int) $db->query('SELECT stock FROM products WHERE id = 1')->fetch_row()[0] === 2, 'Simulation sans commande reelle ni modification stock');
+    $checkoutToken = app_checkout_token($response);
+    check_app(str_contains($response['body'], '9 840 FCFA') && str_contains($response['body'], 'Enregistrer ma commande') && !str_contains($response['body'], 'name="card"'), 'Commande affiche le total FCFA sans collecter de carte');
+    check_app(!preg_match('/€|&euro;|\bEUR\b/u', $response['body']), 'Page de commande affiche uniquement des montants FCFA');
+    check_app(app_request('/app/paiement.php', ['intent' => 'record'])['status'] === 403, 'Enregistrement sans CSRF refuse');
+    check_app(app_request('/app/paiement.php', ['intent' => 'pay', 'csrf_token' => $token])['status'] === 400, 'Action de paiement non disponible refusee cote serveur');
+    check_app(app_request('/app/paiement.php', ['validate_without_pay' => '1', 'csrf_token' => $token])['status'] === 400, 'Ancien contournement administrateur supprime');
+    $customer = ['name' => 'Client Test', 'email' => 'buyer@example.com', 'phone' => '+223 70000000', 'address' => 'Quartier de test, Bamako', 'city' => 'Bamako'];
+    $invalidCustomer = app_request('/app/paiement.php', ['intent' => 'record', 'checkout_token' => $checkoutToken, 'csrf_token' => $token]);
+    check_app($invalidCustomer['status'] === 200 && str_contains($invalidCustomer['body'], 'aria-invalid="true"') && (int) $db->query('SELECT COUNT(*) FROM commerce_orders')->fetch_row()[0] === 0, 'Coordonnees manquantes signalees sans creation partielle');
+    $missingCheckout = app_request('/app/paiement.php', array_merge($customer, ['intent' => 'record', 'csrf_token' => $token]));
+    check_app($missingCheckout['status'] === 200 && str_contains($missingCheckout['body'], 'page a expiré') && (int) $db->query('SELECT COUNT(*) FROM commerce_orders')->fetch_row()[0] === 0, 'Jeton de commande absent refuse sans vider le panier');
+    $response = app_request('/app/panier.php', ['action' => 'quantity', 'product_id' => '1', 'quantity' => '1', 'csrf_token' => $token]);
+    check_app(str_contains($response['body'], '<span aria-label="Quantité">1</span>') && str_contains($response['body'], '4 920 FCFA'), 'Modification de quantite recalcule le total FCFA');
+    $newCheckoutToken = app_checkout_token(app_request('/app/paiement.php'));
+    check_app($newCheckoutToken !== $checkoutToken, 'Modification du panier renouvelle le jeton de commande');
+    $expiredCheckout = app_request('/app/paiement.php', array_merge($customer, ['intent' => 'record', 'checkout_token' => $checkoutToken, 'csrf_token' => $token]));
+    check_app(str_contains($expiredCheckout['body'], 'panier a changé') && (int) $db->query('SELECT COUNT(*) FROM commerce_orders')->fetch_row()[0] === 0, 'Ancienne page de commande refusee apres mutation du panier');
+    $response = app_request('/app/panier.php', ['action' => 'quantity', 'product_id' => '1', 'quantity' => '99', 'csrf_token' => $token]);
+    check_app(str_contains($response['body'], '<span aria-label="Quantité">2</span>') && str_contains($response['body'], '9 840 FCFA'), 'Quantite demandee limitee au stock reel');
+    check_app(app_request('/app/panier.php', ['action' => 'quantity', 'product_id' => '1', 'quantity' => '0', 'csrf_token' => $token])['status'] === 400, 'Quantite nulle refusee');
+    $response = app_request('/app/paiement.php');
+    $checkoutToken = app_checkout_token($response);
+    $checkout = array_merge($customer, ['intent' => 'record', 'checkout_token' => $checkoutToken, 'csrf_token' => $token]);
+    $response = app_request('/app/paiement.php', $checkout);
+    $persistedOrder = $db->query('SELECT * FROM commerce_orders ORDER BY id LIMIT 1')->fetch_assoc();
+    check_app($response['status'] === 200 && is_array($persistedOrder) && str_contains($response['url'], 'order=' . $persistedOrder['reference']) && str_contains($response['body'], 'Votre commande est enregistrée.'), 'Enregistrement explicite cree une vraie commande persistante');
+    check_app(str_contains($response['body'], '9 840 FCFA') && !preg_match('/€|&euro;|\bEUR\b/u', $response['body']), 'Confirmation conserve le même total public en FCFA');
+    check_app($persistedOrder['status'] === 'pending' && (int) $persistedOrder['total_cents'] === 1500 && (int) $persistedOrder['payment_amount'] === 9840 && $persistedOrder['customer_name'] === $customer['name'], 'Commande conserve montants EUR et XOF, coordonnees et etat en attente');
+    check_app(str_contains($response['body'], 'Paiement en ligne à activer') && preg_match('/<button[^>]+disabled>\s*Payer en ligne/', $response['body']) === 1, 'Règlement indisponible affiche clairement avec bouton desactive');
+    $orderLine = $db->query('SELECT * FROM commerce_order_items LIMIT 1')->fetch_assoc();
+    check_app(is_array($orderLine) && (int) $orderLine['quantity'] === 2 && (int) $orderLine['unit_price_cents'] === 750, 'Articles commandes conserves avec leurs prix et quantites');
+    $response = app_request('/app/paiement.php', $checkout);
+    check_app((int) $db->query('SELECT COUNT(*) FROM commerce_orders')->fetch_row()[0] === 1 && str_contains($response['url'], $persistedOrder['reference']), 'Double clic ne cree pas une deuxieme commande');
+    $cartAfterOrder = app_request('/app/panier.php');
+    check_app(str_contains($cartAfterOrder['body'], '<span aria-label="Quantité">2</span>') && str_contains($cartAfterOrder['body'], '9 840 FCFA'), 'Panier conserve apres enregistrement sans paiement');
+    $response = app_request('/app/paiement.php?order=' . $persistedOrder['reference'] . '&paid=1&status=ACCEPTED');
+    check_app(str_contains($response['body'], 'en attente de paiement') && $db->query('SELECT status FROM commerce_orders LIMIT 1')->fetch_row()[0] === 'pending', 'Retour navigateur ne confirme jamais un paiement');
+    require_once $root . '/app/OrderService.php';
+    $legacyId = (int) $db->query("SELECT id FROM users WHERE username='legacy_test'")->fetch_row()[0];
+    $foreignOrder = (new OrderService($db))->createPending($legacyId, [['id' => 1, 'qty' => 1]], bin2hex(random_bytes(32)), ['name' => 'Autre Client']);
+    $response = app_request('/app/paiement.php?order=' . $foreignOrder['reference']);
+    check_app($response['status'] === 404 && !str_contains($response['body'], 'Autre Client') && !str_contains($response['body'], $foreignOrder['customer_email']), 'Commande d’un autre compte inaccessible et coordonnees non divulguees');
+    $response = app_request('/app/dashboard.php');
+    check_app(str_contains($response['body'], $persistedOrder['reference']) && !str_contains($response['body'], $foreignOrder['reference']), 'Historique du compte limite aux commandes du proprietaire');
+    check_app(str_contains($response['body'], '9 840 FCFA') && !preg_match('/€|&euro;|\bEUR\b/u', $response['body']), 'Compte et historique de commande affichent seulement les montants FCFA');
+    check_app((int) $db->query('SELECT COUNT(*) FROM orders')->fetch_row()[0] === 0 && (int) $db->query('SELECT stock FROM products WHERE id = 1')->fetch_row()[0] === 2, 'Anciennes commandes preservees et stock non debite avant reglement');
     $response = app_request('/app/logout.php');
     $token = app_token($response);
     check_app(str_contains(app_request('/app/dashboard.php')['url'], 'dashboard.php'), 'GET logout conserve la session');
@@ -161,6 +226,34 @@ try {
     $response = app_request('/security/dashboard.php');
     check_app($response['status'] === 200 && str_contains($response['body'], 'Blocage SQLi') && str_contains($response['body'], 'JSONL / SIEM'),
         'Supervision ne présente pas clairement le mode actif et les exports');
+    // Le parcours de commande ajoute des événements autorisés : cibler les alertes
+    // évite qu'elles sortent de la première page du journal avant le contrôle de triage.
+    $response = app_request('/security/dashboard.php?action=BLOCKED');
+    check_app(str_contains($response['body'], 'CATALOGUE DE RÈGLES') && str_contains($response['body'], 'Questionner l’assistant sur cette alerte'),
+        'Les alertes exposent la règle structurée et le contexte assistant');
+    if (!preg_match('/name="request_id" value="([A-Za-z0-9_-]{1,128})"/', $response['body'], $triageMatch)) {
+        throw new RuntimeException('Aucun événement révisable ne propose le formulaire de triage.');
+    }
+    $triagedRequestId = $triageMatch[1];
+    $eventsBeforeTriage = array_map(static fn(string $line) => json_decode($line, true), file($directory . '/events.jsonl', FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES));
+    $eventBeforeTriage = null;
+    foreach ($eventsBeforeTriage as $candidate) { if (is_array($candidate) && ($candidate['request_id'] ?? '') === $triagedRequestId) { $eventBeforeTriage = $candidate; break; } }
+    if (!is_array($eventBeforeTriage)) { throw new RuntimeException('Événement choisi introuvable avant le triage.'); }
+    check_app(app_request('/security/triage.php', ['csrf_token' => 'invalid', 'request_id' => $triagedRequestId,
+        'status' => 'false_positive', 'note' => 'note test'])['status'] === 403, 'Triage refuse une mutation sans jeton CSRF');
+    $response = app_request('/security/triage.php', ['csrf_token' => $consoleToken, 'request_id' => $triagedRequestId,
+        'status' => 'false_positive', 'note' => 'password=triage-secret']);
+    $triageFile = $directory . '/triage.jsonl';
+    $triageRecords = is_file($triageFile) ? array_map(static fn(string $line) => json_decode($line, true), file($triageFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES)) : [];
+    $triageRecord = $triageRecords ? end($triageRecords) : null;
+    check_app($response['status'] === 200 && str_contains($response['body'], 'Annotation enregistrée') && is_array($triageRecord) && ($triageRecord['status'] ?? '') === 'false_positive' &&
+        !str_contains((string) ($triageRecord['note'] ?? ''), 'triage-secret') && !str_contains($response['body'], 'triage-secret'),
+        'Triage CSRF-protégé enregistre une note expurgée');
+    $triagedEvents = array_map(static fn(string $line) => json_decode($line, true), file($directory . '/events.jsonl', FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES));
+    $triagedEvent = null;
+    foreach ($triagedEvents as $candidate) { if (is_array($candidate) && ($candidate['request_id'] ?? '') === $triagedRequestId) { $triagedEvent = $candidate; break; } }
+    check_app(is_array($triagedEvent) && ($triagedEvent['action'] ?? '') === ($eventBeforeTriage['action'] ?? null),
+        'Le triage ne réécrit pas la décision du journal de sécurité');
     $response = app_request('/security/dashboard.php?export=jsonl&action=BLOCKED');
     $jsonlEvents = array_values(array_filter(explode("\n", trim($response['body']))));
     $jsonlValid = $response['status'] === 200 && count($jsonlEvents) > 0;

@@ -1,128 +1,72 @@
 <?php
 require_once __DIR__ . '/config.php';
 require_once __DIR__ . '/cart_helpers.php';
+require_once __DIR__ . '/store_layout.php';
 validate_csrf_token();
-$_SESSION['cart'] = $_SESSION['cart'] ?? [];
+$user = current_user();
 $cart_items = refresh_cart();
 if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
     $action = input_text($_POST, 'action');
-    $product_id = (int) input_text($_POST, 'product_id');
+    $productId = (int) input_text($_POST, 'product_id');
+    $index = null;
+    foreach ($_SESSION['cart'] as $key => $item) { if ((int) $item['id'] === $productId) { $index = $key; break; } }
     if ($action === 'add') {
-        $result = execute_query_secure('SELECT id, name, price, stock FROM products WHERE id = ?', [$product_id]);
+        $result = execute_query_secure('SELECT id, name, price, stock FROM products WHERE id = ?', [$productId]);
         $product = $result ? $result->fetch_assoc() : null;
+        $quantity = $index === null ? 0 : (int) $_SESSION['cart'][$index]['qty'];
         if (!$product || (int) $product['stock'] <= 0) {
-            $_SESSION['cart_notice'] = 'Ce produit est indisponible.';
+            $_SESSION['cart_notice'] = 'Ce produit est actuellement indisponible.';
+        } elseif ($quantity >= min((int) $product['stock'], 99)) {
+            $_SESSION['cart_notice'] = 'La quantité disponible est déjà dans votre panier.';
         } else {
-            $index = null;
-            foreach ($_SESSION['cart'] as $key => $item) {
-                if ((int) $item['id'] === $product_id) { $index = $key; break; }
-            }
-            $quantity = $index === null ? 0 : (int) $_SESSION['cart'][$index]['qty'];
-            if ($quantity >= min((int) $product['stock'], 99)) {
-                $_SESSION['cart_notice'] = 'Quantité maximale disponible déjà présente dans le panier.';
-            } else {
-                if ($index === null) {
-                    $_SESSION['cart'][] = ['id' => $product_id, 'name' => $product['name'], 'price' => (float) $product['price'], 'qty' => 1];
-                } else {
-                    $_SESSION['cart'][$index]['qty']++;
-                }
-                $_SESSION['cart_notice'] = 'Produit ajouté au panier.';
-            }
+            if ($index === null) { $_SESSION['cart'][] = ['id' => $productId, 'name' => $product['name'], 'price' => (float) $product['price'], 'qty' => 1]; }
+            else { $_SESSION['cart'][$index]['qty']++; }
+            unset($_SESSION['checkout_token']);
+            $_SESSION['cart_notice'] = $product['name'] . ' a été ajouté à votre panier.';
         }
-        header('Location: search.php?q=' . rawurlencode(input_text($_POST, 'q')));
+        $query = array_filter(['q' => input_text($_POST, 'q'), 'category' => input_text($_POST, 'category')], static fn($value) => $value !== '');
+        header('Location: search.php' . ($query ? '?' . http_build_query($query) : '') . '#products');
         exit;
     }
-    if ($action === 'remove') {
-        $_SESSION['cart'] = array_values(array_filter($_SESSION['cart'], static function ($item) use ($product_id) {
-            return (int) $item['id'] !== $product_id;
-        }));
-        $_SESSION['cart_notice'] = 'Produit retiré du panier.';
-        header('Location: panier.php');
+    if ($action === 'remove' || $action === 'quantity') {
+        if ($index !== null) {
+            if ($action === 'remove') {
+                unset($_SESSION['cart'][$index]);
+                $_SESSION['cart'] = array_values($_SESSION['cart']);
+                $_SESSION['cart_notice'] = 'L’article a été retiré. Votre total est à jour.';
+            } else {
+                $quantity = filter_var(input_text($_POST, 'quantity'), FILTER_VALIDATE_INT, ['options' => ['min_range' => 1, 'max_range' => 99]]);
+                if ($quantity === false) { http_response_code(400); exit('La quantité doit être comprise entre 1 et 99.'); }
+                $_SESSION['cart'][$index]['qty'] = $quantity;
+                refresh_cart();
+                $_SESSION['cart_notice'] = $_SESSION['cart_notice'] ?? 'La quantité et le total ont été mis à jour.';
+            }
+            unset($_SESSION['checkout_token']);
+        }
+        header('Location: panier.php#cart-content');
         exit;
     }
     http_response_code(400);
     exit('Action de panier invalide.');
 }
-$confirmation = $_SESSION['simulation_confirmation'] ?? null;
-unset($_SESSION['simulation_confirmation']);
-$cart_notice = $_SESSION['cart_notice'] ?? '';
-unset($_SESSION['cart_notice']);
-$total = number_format(cart_total($cart_items), 2, ',', ' ');
+$notice = $_SESSION['cart_notice'] ?? '';
+unset($_SESSION['cart_notice'], $_SESSION['simulation_confirmation']);
+$itemCount = array_sum(array_column($cart_items, 'qty'));
+$total = cart_total_xof($cart_items);
 ?>
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mon panier</title>
-    <link rel="stylesheet" href="theme.css?v=<?= (int) filemtime(__DIR__ . '/theme.css') ?>">
-</head>
-<body>
-    <div class="container">
-        <div class="header">
-            <h1>Mon panier</h1>
-            <p class="subtitle">Récapitulatif de votre sélection</p>
-            <nav class="nav-links">
-                <a href="search.php">Catalogue</a>
-                <a href="login.php">Connexion</a>
-                <a href="dashboard.php">Mon espace</a>
-                <a href="panier.php" aria-current="page">Panier</a>
-                <a href="inscription.php">Inscription</a>
-            </nav>
-        </div>
-
-        <?php if ($cart_notice): ?><p class="cart-card" role="status"><?= escape_output($cart_notice) ?></p><?php endif; ?>
-        <?php if ($confirmation): ?>
-        <div class="success-box">
-            <svg class="status-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5" /></svg>
-            <strong>Simulation terminée</strong>
-            <p>Référence <?= escape_output($confirmation['reference']) ?> · <?= number_format($confirmation['total'], 2, ',', ' ') ?> €</p>
-            <p>Aucun paiement ni achat réel n’a été effectué.</p>
-            <a href="search.php" class="link-continue">Continuer mes achats</a>
-        </div>
-        <?php else: ?>
-
-        <?php if (empty($cart_items)): ?>
-        <div class="empty-cart">
-            <svg class="cart-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M3 4h2l2.2 10.2a2 2 0 0 0 2 1.6h7.9a2 2 0 0 0 1.9-1.4L21 8H6" /><circle cx="10" cy="20" r="1" /><circle cx="18" cy="20" r="1" /></svg>
-            <p>Votre panier est vide</p>
-            <a href="search.php" class="btn-search">Parcourir les produits</a>
-        </div>
-        <?php else: ?>
-
-        <div class="cart-card">
-            <?php foreach ($cart_items as $item):
-                $line_total = number_format($item['price'] * $item['qty'], 2, ',', ' ');
-                $price_fmt = number_format($item['price'], 2, ',', ' ');
-            ?>
-            <div class="cart-item">
-                <div class="item-info">
-                    <span class="item-name"><?php echo htmlspecialchars($item['name']); ?></span>
-                    <span class="item-detail"><?php echo $price_fmt; ?> € × <?php echo (int) $item['qty']; ?></span>
-                </div>
-                <div class="item-actions">
-                    <span class="item-price"><?php echo $line_total; ?> €</span>
-                    <form method="post" action="panier.php">
-                        <input type="hidden" name="csrf_token" value="<?= escape_output($_SESSION['csrf_token']) ?>">
-                        <input type="hidden" name="action" value="remove">
-                        <input type="hidden" name="product_id" value="<?= (int) $item['id'] ?>">
-                        <button type="submit" class="link-remove">Retirer</button>
-                    </form>
-                </div>
-            </div>
-            <?php endforeach; ?>
-        </div>
-
-        <div class="total-card">
-            <div class="total-row">
-                <strong>Total</strong>
-                <span class="total-amount"><?php echo $total; ?> €</span>
-            </div>
-            <a href="<?= !empty($_SESSION['logged_in']) ? 'paiement.php' : 'login.php?redirect=paiement' ?>" class="btn-validate">Continuer vers la simulation</a>
-        </div>
-
-        <?php endif; ?>
-        <?php endif; ?>
-    </div>
-</body>
-</html>
+<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#f5f4f0"><title>Votre panier · CyberShield AI</title>
+<link rel="stylesheet" href="store.css?v=<?= (int) filemtime(__DIR__ . '/store.css') ?>"><link rel="stylesheet" href="checkout.css?v=<?= (int) filemtime(__DIR__ . '/checkout.css') ?>"></head>
+<body class="store-page cart-page"><?php store_header('cart', $user); ?><main class="store-main" id="main-content">
+<?php store_steps('cart'); ?>
+<div class="store-heading"><div><p class="store-eyebrow">VOTRE SÉLECTION</p><h1>Votre panier</h1><p><?= $itemCount ? $itemCount . ' article' . ($itemCount > 1 ? 's' : '') . ' à retrouver dans votre commande.' : 'Vos prochains essentiels commencent ici.' ?></p></div><a class="store-back" href="search.php#products"><?= store_icon('arrow') ?> Continuer mes achats</a></div>
+<?php if ($notice): ?><div class="store-notice" role="status"><?= store_icon('check') ?><p><?= escape_output($notice) ?></p></div><?php endif; ?>
+<?php if (!$cart_items): ?>
+<section class="cart-empty"><div class="cart-empty-art"><?= store_icon('bag') ?></div><p class="store-eyebrow">UNE PLACE POUR L’ESSENTIEL</p><h2>Votre panier est vide</h2><p>Parcourez le catalogue et ajoutez les articles qui vous conviennent.</p><a class="store-button store-button--primary" href="search.php#products">Découvrir le catalogue <?= store_icon('arrow') ?></a></section>
+<?php else: ?>
+<div class="purchase-layout" id="cart-content"><section class="cart-selection" aria-labelledby="selection-title"><div class="purchase-section-head"><h2 id="selection-title">Vos articles</h2><span><?= $itemCount ?> article<?= $itemCount > 1 ? 's' : '' ?></span></div>
+<?php foreach ($cart_items as $item): ?><article class="cart-product"><div class="cart-product-art"><?= store_product_art($item) ?></div><div class="cart-product-info"><p class="cart-product-label">ÉQUIPEMENT</p><h3><?= escape_output($item['name']) ?></h3><span class="cart-unit-price"><?= store_money((float) $item['price']) ?> <span>/ unité</span></span>
+<div class="cart-product-controls"><form method="post" action="panier.php" class="quantity-control"><input type="hidden" name="csrf_token" value="<?= escape_output($_SESSION['csrf_token']) ?>"><input type="hidden" name="action" value="quantity"><input type="hidden" name="product_id" value="<?= (int) $item['id'] ?>"><button type="submit" name="quantity" value="<?= (int) $item['qty'] - 1 ?>" aria-label="Diminuer la quantité de <?= escape_output($item['name']) ?>" <?= (int) $item['qty'] <= 1 ? 'disabled' : '' ?>><?= store_icon('minus') ?></button><span aria-label="Quantité"><?= (int) $item['qty'] ?></span><button type="submit" name="quantity" value="<?= (int) $item['qty'] + 1 ?>" aria-label="Augmenter la quantité de <?= escape_output($item['name']) ?>" <?= (int) $item['qty'] >= min((int) ($item['stock'] ?? 99), 99) ? 'disabled' : '' ?>><?= store_icon('plus') ?></button></form>
+<form method="post" action="panier.php" class="cart-remove-form"><input type="hidden" name="csrf_token" value="<?= escape_output($_SESSION['csrf_token']) ?>"><input type="hidden" name="action" value="remove"><input type="hidden" name="product_id" value="<?= (int) $item['id'] ?>"><button type="submit" class="cart-remove" aria-label="Retirer <?= escape_output($item['name']) ?> du panier">Retirer</button></form></div></div><strong class="cart-line-price"><?= store_xof(StoreMoney::cartTotal([$item])) ?></strong></article><?php endforeach; ?>
+<div class="cart-selection-foot"><?= store_icon('bag') ?><p>Vous gardez la main.<span>Modifiez les quantités ou retirez un article avant de commander.</span></p></div></section>
+<aside class="purchase-summary" aria-labelledby="summary-title"><p class="store-eyebrow">RÉCAPITULATIF</p><h2 id="summary-title">Votre récapitulatif</h2><dl class="purchase-totals"><div><dt>Articles <span>(<?= $itemCount ?>)</span></dt><dd><?= store_xof($total) ?></dd></div><div class="purchase-grand-total"><dt>Total</dt><dd><?= store_xof($total) ?></dd></div></dl><p class="purchase-summary-note">Vérifiez vos coordonnées à l’étape suivante, puis retrouvez le statut de votre commande dans votre compte.</p><a class="store-button store-button--primary purchase-main-action" href="<?= $user ? 'paiement.php' : 'login.php?redirect=paiement' ?>">Passer à la commande <?= store_icon('arrow') ?></a><a class="purchase-summary-link" href="search.php#products">Continuer mes achats</a><div class="purchase-assurance"><?= store_icon('lock') ?><span>Aucun prélèvement à cette étape.</span></div></aside></div>
+<?php endif; ?></main><?php store_footer(); ?></body></html>

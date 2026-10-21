@@ -3,6 +3,7 @@ require_once __DIR__ . '/logger.php';
 require_once __DIR__ . '/ia_analyzer.php';
 require_once __DIR__ . '/access.php';
 require_once __DIR__ . '/hybrid_analyzer.php';
+require_once __DIR__ . '/explanations.php';
 console_require_access();
 $result = null;
 $value = "admin' --";
@@ -24,7 +25,7 @@ $health = console_health();
 <body><div class="shell"><?php console_sidebar('lab'); ?><main class="main">
   <div class="topline"><div class="headline"><p class="eyebrow">LABORATOIRE · ANALYSE SANS EXÉCUTION</p><h1>Étudier une saisie</h1><p class="muted">Le laboratoire calcule une décision. Il ne transmet la saisie à aucune requête SQL et ne l’ajoute pas au journal des incidents.</p></div><span class="badge <?=!empty($health['model_loaded'])?'ok':'warn'?>"><span class="dot"></span>MLP <?=!empty($health['model_loaded'])?'disponible':'indisponible'?></span></div>
   <div class="grid"><section class="card"><div class="card-head"><div><h2>Nouvelle analyse</h2><p class="sub">Heuristique rapide, puis MLP seulement dans la zone grise.</p></div></div>
-    <form method="post" action="lab.php"><input type="hidden" name="csrf_token" value="<?=console_escape(console_csrf())?>"><div class="field"><label for="payload">Texte à analyser</label><textarea id="payload" name="payload" maxlength="8192" required><?=console_escape($value)?></textarea></div>
+    <form method="post" action="lab.php#analysis-result"><input type="hidden" name="csrf_token" value="<?=console_escape(console_csrf())?>"><div class="field"><label for="payload">Texte à analyser</label><textarea id="payload" name="payload" maxlength="8192" required><?=console_escape($value)?></textarea></div>
       <div class="field"><label for="context">Contexte du champ</label><select id="context" name="context"><?php foreach(['login'=>'Connexion','search'=>'Recherche','register'=>'Inscription','admin'=>'Administration'] as $key=>$label):?><option value="<?=$key?>" <?=$context===$key?'selected':''?>><?=$label?></option><?php endforeach;?></select></div>
       <p class="event-detail">À essayer : <code>' OR '1'='1' --</code> · <code>admin' --</code> · <code>Clavier mécanique</code> · <code>Bonjour -- merci</code></p>
       <button class="button" type="submit">Analyser localement →</button>
@@ -36,10 +37,10 @@ $health = console_health();
       <div class="callout <?=empty($health['model_loaded'])?'warn':''?>"><?=empty($health['model_loaded'])?'Si le MLP est arrêté, une saisie ambiguë est bloquée par précaution.':'Le modèle local répond. Son jeu synthétique sert à la démonstration, pas à prouver les résultats du dossier initial.'?></div>
     </section></div>
   <?php if($error):?><div class="callout danger" role="alert"><?=console_escape($error)?></div><?php endif;?>
-  <?php if($result):$blocked=(bool)$result['would_block'];?><section class="card lab-result"><div class="card-head"><div><p class="eyebrow">RÉSULTAT</p><h2><?= $blocked?'À bloquer':'Peut être autorisé par le filtre' ?></h2><p class="sub"><?=console_escape($result['reason'])?></p></div><span class="pill <?=$blocked?'danger':'success'?>"><?=$blocked?'BLOCAGE':'AUTORISATION'?></span></div>
+  <?php if($result):$blocked=(bool)$result['would_block'];?><section id="analysis-result" class="card lab-result"><div class="card-head"><div><p class="eyebrow">RÉSULTAT</p><h2><?= $blocked?'À bloquer':'Peut être autorisé par le filtre' ?></h2><p class="sub"><?=console_escape($result['reason'])?></p></div><span class="pill <?=$blocked?'danger':'success'?>"><?=$blocked?'BLOCAGE':'AUTORISATION'?></span></div>
     <?php $explanation=console_explanation($result);?><div class="explanation"><strong>Pourquoi cette décision&nbsp;?</strong><p><?=console_escape($explanation['what'])?></p><p><?=console_escape($explanation['advice'])?></p></div>
     <details class="technical-details"><summary>Voir les scores et détails techniques</summary>
-      <div class="stats"><div class="stat"><div class="stat-label">Score heuristique</div><div class="stat-value"><?= (int)$result['score'] ?><small> / 100</small></div></div><div class="stat"><div class="stat-label">Source de la décision</div><div class="stat-value"><?=console_escape($result['source'])?></div></div><div class="stat"><div class="stat-label">Score MLP</div><div class="stat-value"><?=isset($result['risk'])?number_format((float)$result['risk']*100,1,',',' ').' %':'—'?></div></div><div class="stat"><div class="stat-label">Type estimé</div><div class="stat-value"><?=console_escape($result['attack_type'])?></div></div></div>
+      <div class="stats"><div class="stat"><div class="stat-label">Score heuristique</div><div class="stat-value"><?= (int)$result['score'] ?><small> / 100</small></div></div><div class="stat"><div class="stat-label">Source de la décision</div><div class="stat-value stat-text"><?=console_escape($result['source'])?></div></div><div class="stat"><div class="stat-label">Score MLP</div><div class="stat-value"><?=isset($result['risk'])?number_format((float)$result['risk']*100,1,',',' ').' %':'—'?></div></div><div class="stat"><div class="stat-label">Type estimé</div><div class="stat-value stat-text"><?=console_escape($result['attack_type'])?></div></div></div>
       <p class="event-detail">Règles : <?=console_escape(implode(', ',array_map('strval',$result['patterns'])))?:'aucune signature'?> · IA : <?=console_escape($result['ai_status'])?><?php if($result['model_version']):?> · modèle <?=console_escape($result['model_version'])?><?php endif;?> · <?=console_escape($result['latency_ms'])?> ms</p>
       <p class="muted technical-caveat">Le score de confiance du modèle n’est pas calibré. Ce résultat d’enseignement ne certifie pas l’innocuité d’une saisie.</p>
     </details>

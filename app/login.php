@@ -20,7 +20,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
     validate_csrf_token();
     $username = trim(input_text($_POST, 'username'));
     $password = input_text($_POST, 'password');
-    $clientIp = (string) ($_SERVER['REMOTE_ADDR'] ?? 'unknown');
+    $clientIp = cybershield_client_ip();
     $loginThrottle = null;
     $attemptAllowed = false;
     try {
@@ -90,95 +90,74 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
     $error = 'Identifiants incorrects ou compte inactif.';
     }
 }
+require_once __DIR__ . '/store_layout.php';
 ?>
 <!DOCTYPE html>
-<html lang="fr" data-theme="light">
+<html lang="fr">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Connexion — CyberShield AI</title>
-    <script>(function(){var t=localStorage.getItem('theme');if(t==='light'||t==='dark')document.documentElement.setAttribute('data-theme',t);})();</script>
-    <link rel="stylesheet" href="theme.css?v=<?= (int) filemtime(__DIR__ . '/theme.css') ?>">
+    <meta name="theme-color" content="#f5f4f0">
+    <link rel="stylesheet" href="store.css?v=<?= (int) filemtime(__DIR__ . '/store.css') ?>">
+    <link rel="stylesheet" href="auth.css?v=<?= (int) filemtime(__DIR__ . '/auth.css') ?>">
 </head>
-<body>
-    <div class="container">
-        <button type="button" class="theme-toggle-login" id="themeToggleLogin" aria-label="Passer au thème sombre" aria-pressed="false">
-            Mode sombre
-        </button>
-        <div class="header">
-            <div class="shield-icon">
-                <svg width="32" height="32" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M12 2L4 6v6c0 5.55 3.84 10.74 8 12 4.16-1.26 8-6.45 8-12V6l-8-4zm0 2.18l6 3v5.82c0 4.35-2.78 8.43-6 9.82-3.22-1.39-6-5.47-6-9.82V7.18l6-3z"/>
-                </svg>
+<body class="store-page auth-page">
+    <?php store_header('login', null); ?>
+    <main class="auth-main" id="main-content">
+        <section class="auth-intro" aria-labelledby="login-title">
+            <p class="store-eyebrow">VOTRE ESPACE PERSONNEL</p>
+            <h1 id="login-title">Le plaisir de vous retrouver.</h1>
+            <p class="auth-lead">Connectez-vous pour accéder à votre compte et poursuivre votre commande.</p>
+            <div class="auth-intro-divider" aria-hidden="true"></div>
+            <div class="auth-reference">
+                <span class="auth-reference-number" aria-hidden="true">01</span>
+                <div><strong>Votre compte</strong><p>Vos informations et vos dernières activités, réunies au même endroit.</p></div>
             </div>
-            <h1>Connexion</h1>
-            <p class="subtitle">Connectez-vous pour retrouver votre espace et tester un achat simulé.</p>
-           
-        </div>
-        
-        <div class="form-container">
+            <div class="auth-reference">
+                <span class="auth-reference-number" aria-hidden="true">02</span>
+                <div><strong>Votre sélection</strong><p>Consultez le panier avant de passer au paiement.</p></div>
+            </div>
+            <a class="auth-back-link" href="search.php"><span aria-hidden="true">←</span> Retour au catalogue</a>
+        </section>
+        <section class="auth-panel" aria-labelledby="login-form-title">
+            <div class="auth-panel-heading"><p class="store-eyebrow">BIENVENUE</p><h2 id="login-form-title">Se connecter</h2><p>Entrez vos identifiants pour continuer.</p></div>
             <?php if ($error): ?>
-                <div class="error">
-                    <strong>Erreur:</strong> <?php echo htmlspecialchars($error); ?>
+                <div class="auth-notice auth-notice--error" role="alert">
+                    <strong>Connexion impossible</strong><p><?= escape_output($error) ?></p>
                 </div>
             <?php endif; ?>
             <?php if (!empty($success)): ?>
-                <div class="success"><?php echo htmlspecialchars($success); ?></div>
+                <div class="auth-notice" role="status"><?= escape_output($success) ?></div>
             <?php endif; ?>
-            
-            <form method="POST" action="">
+            <form method="POST" action="" class="auth-form">
                 <input type="hidden" name="csrf_token" value="<?php echo escape_output($_SESSION['csrf_token']); ?>">
                 <input type="hidden" name="redirect" value="<?php echo escape_output($redirect); ?>">
-                <div class="form-group">
+                <div class="auth-field">
                     <label for="username">Nom d'utilisateur</label>
-                    <input type="text" id="username" name="username" 
-                           placeholder="Entrez votre nom d'utilisateur"
+                    <input type="text" id="username" name="username" autocomplete="username"
                            value="<?php echo escape_output(input_text($_POST, 'username')); ?>"
                            required>
                 </div>
-                <div class="form-group">
+                <div class="auth-field">
                     <label for="password">Mot de passe</label>
-                    <input type="password" id="password" name="password" 
-                           placeholder="Entrez votre mot de passe"
-                           required>
+                    <input type="password" id="password" name="password" autocomplete="current-password" required>
                 </div>
-                <div class="form-group">
-                <label for="totp_code">Code d’authentification (administrateurs)</label>
-                    <input type="text" id="totp_code" name="totp_code" inputmode="numeric" autocomplete="one-time-code"
-                           pattern="[0-9]{6}" maxlength="6" aria-describedby="totp-help" placeholder="Code à six chiffres">
-                    <small class="field-hint" id="totp-help">À renseigner uniquement si vous vous connectez avec un compte administrateur.</small>
-                </div>
-                <input type="submit" name="Envoyer" class="submit-btn" value="Se connecter">
+                <details class="auth-details auth-admin-details" <?= input_text($_POST, 'totp_code') !== '' ? 'open' : '' ?>>
+                    <summary>Connexion administrateur</summary>
+                    <div class="auth-field">
+                        <label for="totp_code">Code de votre application</label>
+                        <input type="text" id="totp_code" name="totp_code" inputmode="numeric" autocomplete="one-time-code"
+                               pattern="[0-9]{6}" maxlength="6" aria-describedby="totp-help" placeholder="000000">
+                        <small id="totp-help" class="auth-hint">Le code à six chiffres est nécessaire si le second facteur est activé sur votre compte administrateur.</small>
+                    </div>
+                </details>
+                <button type="submit" name="Envoyer" class="store-button store-button--primary auth-submit">Se connecter <span aria-hidden="true">→</span></button>
             </form>
-            
-            <div class="footer-links">
-                <a href="search.php">Recherche</a>
-                <a href="panier.php">Panier</a>
-                <a href="inscription.php">Créer un compte</a>
-                <a href="setup.php">Première installation</a>
-            </div>
-        </div>
-    </div>
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            var theme = document.documentElement.getAttribute('data-theme') || 'light';
-            var btn = document.getElementById('themeToggleLogin');
-            if (btn) {
-                var updateThemeButton = function() {
-                    btn.textContent = theme === 'light' ? 'Mode sombre' : 'Mode clair';
-                    btn.setAttribute('aria-label', theme === 'light' ? 'Passer au thème sombre' : 'Passer au thème clair');
-                    btn.setAttribute('aria-pressed', theme === 'dark' ? 'true' : 'false');
-                };
-                updateThemeButton();
-                btn.addEventListener('click', function() {
-                    var next = theme === 'light' ? 'dark' : 'light';
-                    theme = next;
-                    localStorage.setItem('theme', next);
-                    document.documentElement.setAttribute('data-theme', next);
-                    updateThemeButton();
-                });
-            }
-        });
-    </script>
+            <p class="auth-switch">Pas encore de compte ? <a href="inscription.php">Créer mon compte</a></p>
+            <a class="auth-install-link" href="setup.php">Première installation administrateur</a>
+        </section>
+    </main>
+    <?php store_footer(); ?>
 </body>
 </html>

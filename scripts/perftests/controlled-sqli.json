@@ -1,0 +1,22 @@
+{
+  "schema": 1,
+  "provenance": "internally_authored_controlled_regression",
+  "independent_validation": false,
+  "description": "Known functional examples, fixed before this run. This suite is neither unseen external traffic nor a customer pilot.",
+  "cases": [
+    {"id":"benign_greeting", "value":"Bonjour Bamako", "truth":"benign", "expected_source":null},
+    {"id":"benign_catalogue", "value":"Casque Bluetooth", "truth":"benign", "expected_source":null},
+    {"id":"benign_apostrophe", "value":"O'Connor", "truth":"benign", "expected_source":null},
+    {"id":"benign_email", "value":"client@example.invalid", "truth":"benign", "expected_source":null},
+    {"id":"benign_digits", "value":"12345", "truth":"benign", "expected_source":null},
+    {"id":"benign_location", "value":"Bamako Mali", "truth":"benign", "expected_source":null},
+    {"id":"benign_french", "value":"Livraison à domicile", "truth":"benign", "expected_source":null},
+    {"id":"benign_surname", "value":"Orlando Anderson", "truth":"benign", "expected_source":null},
+    {"id":"rule_boolean", "value":"' OR 1=1 -- ", "truth":"sqli", "expected_source":"heuristic"},
+    {"id":"rule_union", "value":"1 UNION SELECT 1,2,3", "truth":"sqli", "expected_source":"heuristic"},
+    {"id":"rule_stacked", "value":"'; DROP TABLE users; --", "truth":"sqli", "expected_source":"heuristic"},
+    {"id":"mlp_comment", "value":"admin'-- ", "truth":"sqli", "expected_source":"mlp"},
+    {"id":"mlp_catalog", "value":"information_schema.tables", "truth":"sqli", "expected_source":"mlp"},
+    {"id":"mlp_select", "value":"SELECT name FROM users", "truth":"sqli", "expected_source":"mlp"}
+  ]
+}

@@ -53,6 +53,39 @@ function Get-SecretHash([string] $path) {
     return (Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash
 }
 
+function Assert-PackageCompleteness([string] $folder) {
+    $verify = Join-Path $folder 'scripts/verify-client-deployment.ps1'
+    & $verify -PackageRoot $folder | Out-Host
+    $manifestPath = Join-Path $folder 'package-manifest.json'
+    $original = [System.IO.File]::ReadAllText($manifestPath)
+    # Remove a file AND its manifest entry: COPY/mount reference checks must still fail.
+    foreach ($relative in @('security/client_identity.php', 'security/assistant-page.js',
+        'security/assistant-request.js', 'database/orders.sql')) {
+        $asset = Join-Path $folder $relative
+        $bytes = [System.IO.File]::ReadAllBytes($asset)
+        $manifest = $original | ConvertFrom-Json
+        $manifest.files = @($manifest.files | Where-Object { $_.path -ne $relative })
+        [System.IO.File]::WriteAllText($manifestPath, ($manifest | ConvertTo-Json -Depth 6), [System.Text.UTF8Encoding]::new($false))
+        Remove-Item -LiteralPath $asset
+        $rejected = $false
+        try { & $verify -PackageRoot $folder | Out-Null } catch { $rejected = $true }
+        finally {
+            [System.IO.File]::WriteAllBytes($asset, $bytes)
+            [System.IO.File]::WriteAllText($manifestPath, $original, [System.Text.UTF8Encoding]::new($false))
+        }
+        if (-not $rejected) { throw "La suppression de $relative n'est pas détectée." }
+    }
+    $tampered = Join-Path $folder 'security/assistant-widget.js'
+    $bytes = [System.IO.File]::ReadAllBytes($tampered)
+    [System.IO.File]::AppendAllText($tampered, "`n/* test-only alteration */`n")
+    $rejected = $false
+    try { & $verify -PackageRoot $folder | Out-Null } catch { $rejected = $true }
+    finally { [System.IO.File]::WriteAllBytes($tampered, $bytes) }
+    if (-not $rejected) { throw 'Une altération de fichier public doit invalider le manifeste.' }
+    & $verify -PackageRoot $folder | Out-Host
+    Write-Output 'OK : quatre fichiers de construction manquants et une altération sont détectés.'
+}
+
 try {
     $portA = Get-FreeLoopbackPort
     $portB = Get-FreeLoopbackPort
@@ -83,14 +116,21 @@ try {
 
         $secretNames = @(Get-ChildItem -LiteralPath (Join-Path $instance 'secrets') -Force | ForEach-Object Name | Sort-Object)
         if (($secretNames -join ',') -ne '.htaccess') { throw "Des secrets source ont été copiés dans $instance." }
+        if ((Get-Content -LiteralPath (Join-Path $instance 'secrets/.htaccess') -Raw) -notmatch '(?m)^Require all denied\s*$') {
+            throw "Le dossier de secrets n'est pas interdit à Apache dans $instance."
+        }
         if (-not (Test-Path -LiteralPath (Join-Path $instance 'DEPLOYMENT.md'))) { throw "DEPLOYMENT.md absent de $instance." }
         if (-not (Test-Path -LiteralPath (Join-Path $instance 'docs/DEPLOIEMENT_CLIENTS_ET_INTEGRATION_PHP.md'))) {
             throw "Le guide d'intégration est absent de $instance."
         }
     }
 
+    Assert-PackageCompleteness $instanceA
+    Assert-PackageCompleteness $instanceB
+
     foreach ($instance in @($instanceA, $instanceB)) {
-        & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $instance 'scripts/init-docker.ps1') | Out-Host
+        $powerShellExe = (Get-Process -Id $PID).Path
+        & $powerShellExe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $instance 'scripts/init-docker.ps1') | Out-Host
         if ($LASTEXITCODE -ne 0) { throw "L'initialisation des secrets a échoué dans $instance." }
     }
 

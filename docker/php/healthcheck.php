@@ -10,7 +10,7 @@ try {
     exit(1);
 }
 
-$client = curl_init('http://127.0.0.1/index.php');
+$client = curl_init('http://127.0.0.1/app/health.php');
 curl_setopt_array($client, [
     CURLOPT_RETURNTRANSFER => true,
     CURLOPT_FOLLOWLOCATION => false,

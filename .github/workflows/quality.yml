@@ -1,0 +1,104 @@
+name: CyberShield quality gates
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  php-and-application:
+    runs-on: ubuntu-latest
+    services:
+      mariadb:
+        image: mariadb:11.4.13
+        env:
+          MARIADB_ROOT_PASSWORD: cybershield-ci-root
+          MARIADB_ROOT_HOST: '%'
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="healthcheck.sh --connect --innodb_initialized"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+    env:
+      DB_HOST: 127.0.0.1
+      DB_PORT: 3306
+      DB_USER: root
+      DB_PASSWORD: cybershield-ci-root
+    steps:
+      - uses: actions/checkout@v6
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: curl, mysqli, mbstring
+          coverage: none
+      - name: Lint PHP sources
+        run: find app config security tests docker/php -type f -name '*.php' -print0 | xargs -0 -n1 php -l
+      - name: Rule, logging and access regression tests
+        run: |
+          php -n tests/security_test.php
+          php -n tests/setup_access_test.php
+          php -n tests/client_identity_test.php
+          php -n tests/request_transport_test.php
+          php -n tests/store_money_test.php
+          php tests/orders_test.php
+          php tests/cinetpay_test.php
+      - name: Application integration against MariaDB
+        run: php -d xdebug.mode=off tests/application_test.php
+      - name: Assistant browser event and timeout regressions (Node standard library only)
+        run: node --test tests/assistant_ui_test.cjs
+
+  python-and-assistant:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: |
+            ia/requirements.txt
+            ia/assistant-requirements.txt
+      - name: Install model and LangGraph dependencies
+        run: python -m pip install -r ia/requirements.txt -r ia/assistant-requirements.txt
+      - name: Train the pinned local model fixture
+        run: python ia/train.py
+      - name: Run assistant and model regression tests
+        run: python -m unittest discover -s ia -p 'test_*.py' -v
+      - name: Run SIEM and pilot reporting tests
+        run: python -m unittest discover -s tests -p 'test_*.py' -v
+
+  compose-and-client-isolation:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Create disposable Compose secret files
+        shell: bash
+        run: |
+          mkdir -p secrets
+          chmod 700 secrets
+          trap 'rm -f secrets/db_root_password.txt secrets/db_password.txt secrets/assistant_token.txt secrets/siem_token.txt' EXIT
+          umask 077
+          openssl rand -hex 32 > secrets/db_root_password.txt
+          openssl rand -hex 32 > secrets/db_password.txt
+          openssl rand -hex 32 > secrets/assistant_token.txt
+          openssl rand -hex 32 > secrets/siem_token.txt
+          docker compose config --quiet
+          docker compose --profile assistant -f compose.yaml -f compose.siem.yaml config --quiet
+      - name: Build application images
+        run: docker compose build web ai
+      - name: Verify independent client deployments
+        run: pwsh -NoProfile -File tests/client_deployment_test.ps1
+      - name: Install two clean generated client packages and verify real HTTP isolation
+        run: pwsh -NoProfile -File tests/client_runtime_test.ps1
+      - name: Retain disposable installation test report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: client-runtime-readiness
+          path: tmp/client-runtime-report.json
+          if-no-files-found: ignore

@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/access.php';
 require_once __DIR__ . '/ip_access.php';
+require_once __DIR__ . '/logger.php';
 console_require_access();
 
 $config = require __DIR__ . '/../config/security.php';
@@ -45,7 +46,17 @@ try {
     $rules = [];
     $loadError = true;
 }
-$currentIp = (string) ($_SERVER['REMOTE_ADDR'] ?? 'indisponible');
+$currentIp = cybershield_client_ip();
+$recentDevices = [];
+try {
+    foreach (console_logger()->getEvents(['search' => '/app/client-ip.php', 'from' => gmdate('Y-m-d')], 100) as $visit) {
+        $address = (string) ($visit['ip'] ?? '');
+        if ($address === $currentIp || filter_var($address, FILTER_VALIDATE_IP) === false || isset($recentDevices[$address])) { continue; }
+        $recentDevices[$address] = $visit;
+        if (count($recentDevices) >= 8) { break; }
+    }
+} catch (Throwable $error) { error_log('CyberShield : appareils récents indisponibles.'); }
+$blockedAddresses = array_fill_keys(array_column($rules, 'ip_address'), true);
 ?>
 <!doctype html>
 <html lang="fr">
@@ -102,20 +113,35 @@ $currentIp = (string) ($_SERVER['REMOTE_ADDR'] ?? 'indisponible');
     </div>
 
     <section class="card">
+      <div class="card-head"><div><p class="eyebrow">DÉMONSTRATION EN DIRECT</p><h2>Appareils connectés aujourd’hui</h2><p class="sub">Ouvrez le lien téléphone, puis actualisez cette page pour retrouver son adresse.</p></div><a class="button secondary" href="ip-rules.php">Actualiser</a></div>
+      <?php if (!$recentDevices): ?><p class="event-detail">Aucun appareil distinct détecté sur la page de connexion réseau. Sur le téléphone, ouvrez l’adresse affichée par <code>start-phone-demo.ps1</code>.</p><?php else: ?>
+      <div class="table-wrap ip-table-wrap"><table class="table ip-data-table" role="table" aria-label="Appareils connectés aujourd’hui"><thead role="rowgroup"><tr role="row"><th scope="col" role="columnheader">Adresse de l’appareil</th><th scope="col" role="columnheader">Dernière visite (UTC)</th><th scope="col" role="columnheader">Accès</th><th scope="col" role="columnheader">Action</th></tr></thead><tbody role="rowgroup">
+      <?php foreach ($recentDevices as $address => $visit): $isBlocked = isset($blockedAddresses[$address]); ?>
+        <tr role="row">
+          <td class="mono" role="cell"><span class="mobile-cell-label" aria-hidden="true">Adresse de l’appareil</span><span class="ip-cell-value"><?= console_escape($address) ?></span></td>
+          <td role="cell"><span class="mobile-cell-label" aria-hidden="true">Dernière visite (UTC)</span><span class="ip-cell-value"><?= console_escape(gmdate('H:i:s', strtotime($visit['timestamp']))) ?></span></td>
+          <td role="cell"><span class="mobile-cell-label" aria-hidden="true">Accès</span><span class="pill <?= $isBlocked ? 'danger' : 'success' ?>"><?= $isBlocked ? 'Bloqué' : 'Autorisé' ?></span></td>
+          <td class="ip-table-action" role="cell"><span class="mobile-cell-label" aria-hidden="true">Action</span><form method="post" action="ip-rules.php"><input type="hidden" name="csrf_token" value="<?= console_escape(console_csrf()) ?>"><input type="hidden" name="operation" value="<?= $isBlocked ? 'remove' : 'add' ?>"><input type="hidden" name="ip" value="<?= console_escape($address) ?>"><input type="hidden" name="comment" value="Démonstration : contrôle d’accès de l’appareil"><button class="button <?= $isBlocked ? 'secondary' : '' ?>" type="submit" <?= $loadError ? 'disabled' : '' ?>><?= $isBlocked ? 'Rétablir l’accès' : 'Bloquer cet appareil' ?></button></form></td>
+        </tr>
+      <?php endforeach; ?>
+      </tbody></table></div><?php endif; ?>
+    </section>
+
+    <section class="card">
       <div class="card-head"><div><h2>Adresses bloquées</h2><p class="sub">Les commentaires sont internes à la console et ne sont jamais affichés aux visiteurs bloqués.</p></div></div>
       <?php if (!$rules): ?>
         <div class="empty"><?= $loadError ? 'Aucune règle ne peut être affichée tant que le stockage est indisponible.' : 'Aucune adresse bloquée. Toutes les adresses restent soumises au filtre SQLi et à la limitation de débit.' ?></div>
       <?php else: ?>
-        <div class="table-wrap">
-          <table class="table">
-            <thead><tr><th>Adresse IP</th><th>Motif</th><th>Ajoutée (UTC)</th><th><span class="sr-only">Action</span></th></tr></thead>
-            <tbody>
+        <div class="table-wrap ip-table-wrap">
+          <table class="table ip-data-table" role="table" aria-label="Adresses bloquées">
+            <thead role="rowgroup"><tr role="row"><th scope="col" role="columnheader">Adresse IP</th><th scope="col" role="columnheader">Motif</th><th scope="col" role="columnheader">Ajoutée (UTC)</th><th role="columnheader" scope="col"><span class="sr-only">Action</span></th></tr></thead>
+            <tbody role="rowgroup">
             <?php foreach ($rules as $rule): ?>
-              <tr>
-                <td class="mono"><?= console_escape($rule['ip_address']) ?></td>
-                <td><?= console_escape($rule['comment'] !== '' ? $rule['comment'] : '—') ?></td>
-                <td><?= console_escape(gmdate('d/m/Y H:i', strtotime($rule['created_at']) ?: 0)) ?></td>
-                <td>
+              <tr role="row">
+                <td class="mono" role="cell"><span class="mobile-cell-label" aria-hidden="true">Adresse IP</span><span class="ip-cell-value"><?= console_escape($rule['ip_address']) ?></span></td>
+                <td role="cell"><span class="mobile-cell-label" aria-hidden="true">Motif</span><span class="ip-cell-value"><?= console_escape($rule['comment'] !== '' ? $rule['comment'] : '—') ?></span></td>
+                <td role="cell"><span class="mobile-cell-label" aria-hidden="true">Ajoutée (UTC)</span><span class="ip-cell-value"><?= console_escape(gmdate('d/m/Y H:i', strtotime($rule['created_at']) ?: 0)) ?></span></td>
+                <td class="ip-table-action" role="cell"><span class="mobile-cell-label" aria-hidden="true">Action</span>
                   <form method="post" action="ip-rules.php">
                     <input type="hidden" name="csrf_token" value="<?= console_escape(console_csrf()) ?>">
                     <input type="hidden" name="operation" value="remove">

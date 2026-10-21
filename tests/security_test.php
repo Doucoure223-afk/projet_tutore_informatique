@@ -6,6 +6,7 @@ if (PHP_SAPI !== 'cli') {
 }
 require_once __DIR__ . '/../security/detector.php';
 require_once __DIR__ . '/../security/logger.php';
+require_once __DIR__ . '/../security/rule_catalog.php';
 require_once __DIR__ . '/../security/hybrid_analyzer.php';
 require_once __DIR__ . '/../security/ip_access.php';
 require_once __DIR__ . '/../security/middleware.php';
@@ -25,6 +26,49 @@ $fakeAi = new class extends AIAnalyzer {
     public function shouldBlock($result): bool { return $result['risk'] >= 0.75; }
 };
 $hybrid = new HybridAnalyzer(new SQLInjectionDetector(null, $hybridConfig), $fakeAi, $hybridConfig);
+$allowingAi = new class extends AIAnalyzer {
+    public int $calls = 0;
+    public function __construct() {}
+    public function analyze($input, $context = 'unknown'): array
+    {
+        $this->calls++;
+        return ['risk' => 0.01, 'confidence' => 0.99, 'model_version' => 'telemetry-test'];
+    }
+    public function shouldBlock($result): bool { return $result['risk'] >= 0.75; }
+};
+$telemetryAnalyzer = new HybridAnalyzer(new SQLInjectionDetector(null, $hybridConfig), $allowingAi, $hybridConfig);
+$telemetry = ['mlp_calls' => 0, 'mlp_attempts' => 0, 'mlp_failures' => 0, 'mlp_latency_ms' => 0.0];
+foreach (['Bonjour Bamako', '/app/search.php', 'Casque Bluetooth'] as $value) {
+    $allowedAnalysis = $telemetryAnalyzer->analyze($value, 'GET[q]', 'search', true, true);
+    check(!$allowedAnalysis['would_block'] && $allowedAnalysis['score'] === 0, 'Accounting changed benign MLP policy');
+    cybershield_record_mlp_analysis($telemetry, $allowedAnalysis, true);
+}
+check($allowingAi->calls === 3 && $telemetry['mlp_calls'] === 3 && $telemetry['mlp_attempts'] === 3,
+    'Successful score-zero pre-screens are missing from inference accounting');
+$directRule = $telemetryAnalyzer->analyze("' OR 1=1 -- ", 'GET[q]', 'search', true, true);
+cybershield_record_mlp_analysis($telemetry, $directRule, true);
+check($allowingAi->calls === 3 && $telemetry['mlp_attempts'] === 3, 'Immediate rule block counted as MLP inference');
+$budgetRefusal = $telemetryAnalyzer->analyze("admin'-- ", 'GET[q]', 'search', false, false);
+cybershield_record_mlp_analysis($telemetry, $budgetRefusal, false);
+check($budgetRefusal['would_block'] && $telemetry['mlp_attempts'] === 3, 'Refused model budget was counted as a model call');
+$failedPrediction = ['needs_ai' => true, 'source' => 'fail_safe', 'ai_status' => 'unavailable', 'risk' => null, 'latency_ms' => 900];
+cybershield_record_mlp_analysis($telemetry, $failedPrediction, true);
+check($telemetry['mlp_calls'] === 3 && $telemetry['mlp_attempts'] === 4 && $telemetry['mlp_failures'] === 1,
+    'Failed model attempt was counted as a successful prediction');
+$regression = json_decode(file_get_contents(__DIR__ . '/fixtures/sql-injection-regression.json'), true);
+$registeredPatterns = [];
+foreach (CyberShieldRuleCatalog::rules() as $rule) { $registeredPatterns = array_merge($registeredPatterns, $rule['patterns'] ?? []); }
+foreach ((new SQLInjectionDetector())->getPatterns() as $pattern) {
+    check(in_array($pattern, $registeredPatterns, true), 'Detector signature missing from rule catalog: ' . $pattern);
+}
+foreach ($regression['positive'] as $case) {
+    $result = (new SQLInjectionDetector())->analyzeWithScore($case['input']);
+    check(in_array($case['pattern'], $result['patterns'], true), 'Regression signature missed: ' . $case['name']);
+    check($result['would_block'] === $case['would_block'], 'Regression block threshold changed: ' . $case['name']);
+}
+foreach ($regression['benign'] as $input) {
+    check(!(new SQLInjectionDetector())->analyzeWithScore($input)['would_block'], 'Benign regression input would be blocked: ' . $input);
+}
 $lowRiskWithoutPrescreen = $hybrid->analyze('Bonjour Bamako', 'GET[q]', 'search', true, false);
 check(!$lowRiskWithoutPrescreen['needs_ai'] && $lowRiskWithoutPrescreen['source'] === 'heuristic', 'Optional MLP pre-screen changed the rule-only path');
 $lowRiskWithPrescreen = $hybrid->analyze('Bonjour Bamako', 'GET[q]', 'search', true, true);
@@ -87,6 +131,19 @@ $ipDirectory = $directory . DIRECTORY_SEPARATOR . 'ip-policy';
 $databaseSecretFile = $directory . DIRECTORY_SEPARATOR . 'db-password-test.txt';
 try {
     $logger = new SecurityLogger($file);
+    $telemetryLogger = new SecurityLogger($directory . DIRECTORY_SEPARATOR . 'telemetry-events.jsonl');
+    $telemetryEntry = $telemetryLogger->logEvent(array_merge($telemetry, [
+        'request_id' => 'allowed-with-three-inferences', 'action' => 'ALLOWED', 'source' => 'heuristic', 'score' => 0,
+    ]));
+    $telemetryStats = $telemetryLogger->getStats();
+    check($telemetryEntry['action'] === 'ALLOWED' && $telemetryEntry['source'] === 'heuristic' && $telemetryEntry['risk'] === null,
+        'Inference accounting overwrote the final decision');
+    check($telemetryStats['ai_analyzed'] === 3 && $telemetryStats['ai_requests'] === 1 && $telemetryStats['ai_attempted'] === 4
+        && $telemetryStats['ai_failed'] === 1 && $telemetryStats['blocked_by_ai'] === 0,
+        'Inference aggregates mix calls, failed attempts, requests and blocks');
+    $roundTripTelemetry = json_decode(trim($telemetryLogger->exportJsonLines()), true);
+    check($roundTripTelemetry['mlp_calls'] === 3 && $roundTripTelemetry['mlp_failures'] === 1,
+        'JSONL export dropped request-level inference accounting');
     $originalPasswordFile = getenv('DB_PASSWORD_FILE');
     $originalPassword = getenv('DB_PASSWORD');
     file_put_contents($databaseSecretFile, "mounted-db-secret\r\n");
@@ -112,6 +169,19 @@ try {
     $duplicate = $logger->logEvent(['request_id' => 'blocked-1', 'action' => 'ALLOWED']);
     check($first === $duplicate && count($logger->getEvents()) === 1, 'Final event duplicated');
     check($first['payload'] === '[REDACTED]' && $first['path'] === '/app/login.php', 'Credential or query string leaked');
+    check(count($logger->getEvents(['search' => '/app/login.php'])) === 1, 'Route search misses literal URL paths containing slashes');
+    check($first['rule_id'] === 'CS-SQLI-009' && $first['severity'] === 'medium' && preg_match('/^[a-f0-9]{64}$/D', $first['finding_fingerprint']), 'Structured rule mapping or finding fingerprint missing');
+    $fingerprintA = CyberShieldRuleCatalog::enrich(['request_id' => 'a', 'attack_type' => 'UNION_SELECT', 'action' => 'BLOCKED', 'method' => 'GET', 'path' => '/users/42', 'ip' => '192.0.2.1', 'payload_hash' => 'one']);
+    $fingerprintB = CyberShieldRuleCatalog::enrich(['request_id' => 'b', 'attack_type' => 'UNION_SELECT', 'action' => 'BLOCKED', 'method' => 'GET', 'path' => '/users/77', 'ip' => '192.0.2.99', 'payload_hash' => 'two']);
+    check($fingerprintA['finding_fingerprint'] === $fingerprintB['finding_fingerprint'], 'Finding fingerprint changes with request-specific identifiers');
+    $fingerprintC = CyberShieldRuleCatalog::enrich(['attack_type' => 'UNION_SELECT', 'action' => 'BLOCKED', 'method' => 'GET', 'path' => '/accounts/77']);
+    check($fingerprintB['finding_fingerprint'] !== $fingerprintC['finding_fingerprint'], 'Finding fingerprint ignores route identity');
+    $monitoredModelFinding = CyberShieldRuleCatalog::enrich(['action' => 'MONITORED', 'source' => 'mlp', 'would_block' => true, 'attack_type' => 'NONE']);
+    $allowedModelEvent = CyberShieldRuleCatalog::enrich(['action' => 'ALLOWED', 'source' => 'mlp', 'would_block' => false, 'attack_type' => 'NONE']);
+    $failSafeFinding = CyberShieldRuleCatalog::enrich(['action' => 'BLOCKED', 'source' => 'fail_safe', 'would_block' => true, 'attack_type' => 'NONE']);
+    check($monitoredModelFinding['rule_id'] === 'CS-MLP-001' && $allowedModelEvent['rule_id'] === null,
+        'Model-only findings are catalogued in monitor mode without labelling allowed traffic');
+    check($failSafeFinding['rule_id'] === 'CS-OPS-005', 'Fail-safe MLP decisions are identified as an operational finding');
     $logger->logEvent([
         'request_id' => 'allowed-2', 'action' => 'ALLOWED', 'ip' => '127.0.0.1',
         'payload' => ['q' => "Bonjour\r\n[FORGED]", 'password' => 'nested-secret', 'csrf_token' => 'token-secret',
@@ -180,6 +250,21 @@ try {
     check($logger->redact('token=abc&username=alice') === 'token=[REDACTED]&username=alice', 'Inline secret redaction failed');
     check($logger->redact('4111 1111 1111 1111') === '[REDACTED_CARD]', 'Card-number redaction failed');
     check(strpos($logger->redact('{"password":"json-secret"}'), 'json-secret') === false, 'Quoted JSON credential not redacted');
+    $triage = $logger->updateTriage('blocked-1', 'false_positive', 'password=triage-secret — à vérifier', 7);
+    check($triage['status'] === 'false_positive' && strpos($triage['note'], 'triage-secret') === false, 'Triage note secret was not redacted');
+    check(($logger->getTriageMap(['blocked-1'])['blocked-1']['status'] ?? '') === 'false_positive', 'Latest triage annotation was not readable');
+    check(($logger->findEventByRequestId('blocked-1')['action'] ?? '') === 'BLOCKED', 'Triage annotation changed the original filter decision');
+    check(strpos(file_get_contents(dirname($file) . DIRECTORY_SEPARATOR . 'triage.jsonl'), 'triage-secret') === false, 'Raw triage secret reached the sidecar journal');
+    $oldLogDirectory = getenv('CYBERSHIELD_LOG_DIR');
+    putenv('CYBERSHIELD_LOG_DIR=' . dirname($file));
+    require_once __DIR__ . '/../security/assistant-client.php';
+    $assistantContext = cybershield_assistant_context('dashboard', 'blocked-1');
+    $assistantJson = json_encode($assistantContext, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+    check(($assistantContext['selected_event']['rule_id'] ?? '') === 'CS-SQLI-009', 'Assistant did not receive selected rule context');
+    foreach (['::1', '/app/login.php', 'triage-secret', 'super-secret'] as $privateValue) {
+        check(strpos($assistantJson, $privateValue) === false, 'Assistant event context leaked private value: ' . $privateValue);
+    }
+    if ($oldLogDirectory === false) { putenv('CYBERSHIELD_LOG_DIR'); } else { putenv('CYBERSHIELD_LOG_DIR=' . $oldLogDirectory); }
 
     $ipAccess = new IpAccessControl($ipDirectory);
     check($ipAccess->listRules() === [], 'IP policy should start empty');
@@ -205,6 +290,10 @@ try {
 } finally {
     // Delete only the test file and the unique directory created above.
     if (is_file($file)) { unlink($file); }
+    $telemetryFile = $directory . DIRECTORY_SEPARATOR . 'telemetry-events.jsonl';
+    if (is_file($telemetryFile)) { unlink($telemetryFile); }
+    $triageFile = dirname($file) . DIRECTORY_SEPARATOR . 'triage.jsonl';
+    if (is_file($triageFile)) { unlink($triageFile); }
     if (is_file($databaseSecretFile)) { unlink($databaseSecretFile); }
     foreach (['blocked-ips.json', 'blocked-ips.json.lock'] as $ipFile) {
         $path = $ipDirectory . DIRECTORY_SEPARATOR . $ipFile;

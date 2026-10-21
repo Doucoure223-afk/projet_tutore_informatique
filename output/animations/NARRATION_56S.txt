@@ -1,0 +1,8 @@
+[00:00–00:16 — Site vulnérable]
+Sur un site vulnérable, cette saisie arrive comme paramètre HTTP. Le code PHP la concatène au SQL : elle peut alors modifier la condition envoyée à la base. Ce scénario est fictif.
+
+[00:16–00:34 — Blocage par les règles]
+Avec CyberShield en mode blocage, la même entrée est analysée avant l’accès SQL. La signature est reconnue : score quatre-vingt-dix, seuil quatre-vingts. Le serveur répond « accès refusé » et conserve une trace. La base n’est pas appelée.
+
+[00:34–00:56 — Décision conditionnelle du MLP]
+Pour un cas ambigu, le MLP fournit un score. S’il atteint zéro virgule soixante-quinze, la requête est arrêtée ; sinon, elle poursuit vers une requête préparée. Ce parcours est conditionnel, sans score mesuré pour cet exemple. Le verdict reste un signal, pas une preuve. L’assistant LLM ne décide jamais.

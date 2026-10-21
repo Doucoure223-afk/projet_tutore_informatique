@@ -37,6 +37,7 @@ $pageSize = 20;
 $events = $logger->getEvents($filters, $pageSize + 1, ($page - 1) * $pageSize);
 $hasNextPage = count($events) > $pageSize;
 if ($hasNextPage) { array_pop($events); }
+$triageMap = $logger->getTriageMap(array_values(array_filter(array_column($events, 'request_id'), 'is_string')));
 $healthReady = !empty($health['model_loaded']);
 $monitorMode = !(bool) (require __DIR__ . '/../config/security.php')['block_mode'];
 $types = array_keys($stats['by_type']);
@@ -138,12 +139,12 @@ $chartHasData = $totalEvents > 0;
       <article class="metric metric-blocked">
         <span class="metric-label">Requêtes bloquées</span>
         <strong class="metric-value"><?= number_format((int) $stats['blocked'], 0, ',', ' ') ?></strong>
-        <span class="metric-caption"><?= console_escape((string) $stats['block_rate']) ?> % des événements consignés</span>
+        <span class="metric-caption"><?= (int) $stats['blocked_by_rules'] ?> par règles · <?= (int) $stats['blocked_by_ip'] ?> par IP · <?= (int) $stats['blocked_other'] ?> autres</span>
       </article>
       <article class="metric metric-mlp">
-        <span class="metric-label">Analyses MLP journalisées</span>
-        <strong class="metric-value"><?= number_format((int) $stats['ai_analyzed'], 0, ',', ' ') ?></strong>
-        <span class="metric-caption"><?= $healthReady ? 'Modèle disponible' : 'Modèle à démarrer' ?></span>
+        <a class="metric-label" href="dashboard.php?action=BLOCKED_BY_AI#incidents">Bloquées par l’IA (MLP) ↗</a>
+        <strong class="metric-value"><?= number_format((int) $stats['blocked_by_ai'], 0, ',', ' ') ?></strong>
+        <span class="metric-caption"><?= (int) $stats['ai_analyzed'] ?> analyses MLP journalisées · <?= $healthReady ? 'modèle disponible' : 'modèle à démarrer' ?></span>
       </article>
     </section>
 
@@ -247,6 +248,7 @@ $chartHasData = $totalEvents > 0;
       </form>
 
       <div class="results-summary" aria-live="polite">
+        <?php if (($_GET['triage'] ?? '') === 'updated'): ?><span class="triage-notice" role="status">Annotation enregistrée. La décision initiale du filtre reste inchangée.</span><?php endif; ?>
         <span><?= count($events) ?> événement(s) affiché(s) · page <?= $page ?></span>
         <?php if ($filters['search'] !== '' || $filters['action'] !== '' || $filters['type'] !== '' || $filters['from'] !== '' || $filters['to'] !== ''): ?><span>Filtres actifs · <a href="dashboard.php#incidents">Tout effacer</a></span><?php endif; ?>
       </div>
@@ -273,6 +275,30 @@ $chartHasData = $totalEvents > 0;
                 <p class="incident-reason"><?= console_escape($event['reason'] ?? 'Aucune explication enregistrée.') ?></p>
                 <?php if (!empty($event['model_version'])): ?><p class="incident-model">Modèle : <?= console_escape($event['model_version']) ?></p><?php endif; ?>
                 <div class="explanation"><strong><?= console_escape($explanation['label']) ?></strong><p><?= console_escape($explanation['what']) ?></p><p><?= console_escape($explanation['advice']) ?></p></div>
+                <?php if (!empty($event['rule_id'])): $triage = $triageMap[(string) ($event['request_id'] ?? '')] ?? []; $triageLabels = ['needs_review' => 'À examiner', 'confirmed' => 'Confirmée', 'false_positive' => 'Faux positif']; ?>
+                  <section class="finding-catalog" aria-label="Règle associée">
+                    <div class="finding-catalog-heading"><span class="eyebrow">CATALOGUE DE RÈGLES</span><span class="severity severity-<?= console_escape($event['severity'] ?? 'medium') ?>"><?= console_escape($event['severity'] ?? 'medium') ?></span></div>
+                    <h3><?= console_escape($event['rule_id']) ?> · <?= console_escape($event['rule_name'] ?? 'Signal local') ?></h3>
+                    <p><?= console_escape($event['rule_description'] ?? '') ?></p>
+                    <p><strong>Correction conseillée :</strong> <?= console_escape($event['rule_remediation'] ?? '') ?></p>
+                    <p class="finding-references"><?= console_escape($event['cwe'] ?? '') ?><?= !empty($event['owasp']) ? ' · ' . console_escape($event['owasp']) : '' ?></p>
+                    <p class="incident-fingerprint">Empreinte de constat <code><?= console_escape(substr((string) ($event['finding_fingerprint'] ?? ''), 0, 16)) ?></code></p>
+                    <button class="button secondary assistant-event-context" type="button" data-event-id="<?= console_escape($event['request_id'] ?? '') ?>">Questionner l’assistant sur cette alerte</button>
+                  </section>
+                  <form class="incident-triage" method="post" action="triage.php">
+                    <input type="hidden" name="csrf_token" value="<?= console_escape(console_csrf()) ?>">
+                    <input type="hidden" name="request_id" value="<?= console_escape($event['request_id'] ?? '') ?>">
+                    <label>État de triage
+                      <select name="status" required>
+                        <?php foreach ($triageLabels as $value => $label): ?><option value="<?= console_escape($value) ?>" <?= ($triage['status'] ?? 'needs_review') === $value ? 'selected' : '' ?>><?= console_escape($label) ?></option><?php endforeach; ?>
+                      </select>
+                    </label>
+                    <label>Note d’analyse <span>(500 caractères max., secrets expurgés)</span>
+                      <textarea name="note" maxlength="500" rows="2"><?= console_escape($triage['note'] ?? '') ?></textarea>
+                    </label>
+                    <div class="triage-footer"><span><?= !empty($triage['updated_at']) ? 'Mis à jour le ' . console_escape(date('d/m/Y H:i', strtotime((string) $triage['updated_at']))) : 'Aucune annotation' ?> · annotation sans effet sur le filtre</span><button class="button" type="submit">Enregistrer le triage</button></div>
+                  </form>
+                <?php endif; ?>
                 <p class="incident-reference">Référence <code><?= console_escape($event['id'] ?? '') ?></code></p>
               </div>
             </details>

@@ -1,5 +1,14 @@
 .git
 .git/**
+.codex/
+.agents/
+docker-secrets/
+output/
+tmp/
+*.pptx
+*.docx
+*.pdf
+/*.txt
 .runtime/
 .venv/
 ollama-models/

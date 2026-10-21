@@ -1,9 +1,18 @@
 <?php
+require_once __DIR__ . '/../security/client_identity.php';
 /** Allow local-only routes from loopback or the configured Docker Desktop host forwarder. */
 function cybershield_local_request_allowed(array $server, ?bool $isCli = null, ?string $routeTable = null): bool
 {
     if ($isCli ?? (PHP_SAPI === 'cli')) {
         return true;
+    }
+
+    // A phone forwarded by the LAN relay is never the local administrator,
+    // even though Docker sees the same host gateway for both connections.
+    try {
+        if (cybershield_is_lan_proxy_request($server)) { return false; }
+    } catch (CybershieldClientIdentityException $error) {
+        return false;
     }
 
     $remoteIp = (string) ($server['REMOTE_ADDR'] ?? '');

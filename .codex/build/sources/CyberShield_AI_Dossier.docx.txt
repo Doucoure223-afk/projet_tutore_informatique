@@ -1,0 +1,337 @@
+DOSSIER DE CANDIDATURE
+Concours Innovation — Journées Nationales de la Cybersécurité (JNC Mali)
+CyberShield AI
+La plateforme intelligente de cybersécurité pour les organisations africaines
+Porteurs du projet : Sekou Doucoure
+En collaboration avec Hawa Thiama
+École Nationale d'Ingénieurs Abderhamane Baba Touré (ENI-ABT) — Bamako, Mali
+Page 1
+SOMMAIRE
+Résumé exécutif......................................................................................................................................3
+Présentation du problème.......................................................................................................................4
+Analyse du contexte malien.....................................................................................................................5
+Vision, mission et proposition de valeur..................................................................................................6
+Description détaillée de CyberShield AI...................................................................................................7
+Architecture fonctionnelle.......................................................................................................................8
+Architecture technique............................................................................................................................9
+Fonctionnalités actuelles et évolutions prévues....................................................................................11
+Technologies utilisées............................................................................................................................12
+Innovation et différenciation...............................................................................................................13
+Faisabilité.............................................................................................................................................14
+Impact économique, social et souveraineté numérique......................................................................15
+Business model.................................................................................................................................... 16
+Feuille de route....................................................................................................................................17
+Analyse des risques.............................................................................................................................18
+Conclusion...........................................................................................................................................19
+RÉSUMÉ EXÉCUTIF
+L'injection SQL demeure, année après année, la vulnérabilité la plus exploitée du classement OWASP Top 10. Au Mali comme dans le reste de l'espace ouest-africain, la majorité des administrations, PME, écoles et institutions financières déploient des applications web sans disposer d'une équipe de cybersécurité dédiée. Cette asymétrie entre la sophistication croissante des attaques automatisées et la faiblesse des moyens de défense locaux constitue un risque systémique pour la souveraineté numérique du pays.
+CyberShield AI répond à ce constat par une approche radicalement différente des solutions existantes : au lieu d'un simple pare-feu applicatif (WAF) qui bloque sans expliquer, CyberShield AI est une plateforme intelligente qui détecte, comprend, priorise et accompagne. Elle repose sur une architecture hybride déjà conçue, implémentée et validée expérimentalement, associant un moteur heuristique déterministe à un moteur d'intelligence artificielle (Perceptron Multicouche), le tout supervisé par un assistant IA conversationnel capable d'expliquer chaque incident en langage naturel à un administrateur non-expert.
+Un socle scientifique solide et déjà validé : un score F1 de 0,988 sur le module d'intelligence artificielle, un taux de faux positifs de 0,5 % et une latence totale maîtrisée sous 100 ms pour 98 % des requêtes, mesurés sur un jeu de 10 000 requêtes et confirmés par des campagnes de tests d'intrusion (SQLmap, Burp Suite).
+Une vision produit ambitieuse : faire évoluer le MVP actuel(centré sur l'injection SQL) vers une plateforme de cybersécurité complète couvrant l'ensemble de l'OWASP Top 10, destinée aux organisations africaines qui ne peuvent recruter un expert en interne.
+Un impact direct sur la souveraineté numérique : une solution conçue, développée et hébergeable localement, réduisant la dépendance aux licences étrangères et renforçant la résilience cyber des infrastructures maliennes critiques.
+Ce dossier présente le contexte, la vision, l'architecture, les résultats scientifiques déjà obtenus, ainsi que la feuille de route produit et la stratégie de déploiement de CyberShield AI. Une distinction claire est maintenue tout au long du document entre ce qui est aujourd'hui réalisé et validé, et ce qui relève de la vision et de la trajectoire d'évolution du produit.
+Ce qu'il faut retenir
+CyberShield AI n'est pas un concept théorique : c'est une plateforme dont le premier module (protection contre l'injection SQL) est entièrement fonctionnel, testé et documenté scientifiquement. Le concours d'innovation est l'occasion de transformer cette réussite académique en produit déployable à l'échelle du Mali et de la sous-région.
+PRÉSENTATION DU PROBLÈME
+Une menace persistante et sous-estimée
+Malgré des décennies de sensibilisation, l'injection SQL reste en tête des vulnérabilités applicatives recensées par l'OWASP. Elle permet à un attaquant de contourner l'authentification, d'extraire des données confidentielles, de modifier ou de détruire des données critiques, voire d'exécuter du code sur le serveur. La sophistication croissante des techniques d'obfuscation (encodage hexadécimal, commentaires imbriqués, injections en aveugle temporisées) rend les défenses statiques traditionnelles de moins en moins efficaces face à des outils d'automatisation d'attaque largement accessibles.
+Le dilemme sécurité-performance
+Les Web Application Firewalls (WAF) classiques, fondés sur des signatures statiques, échouent face aux attaques inédites (« zero-day ») et génèrent un taux de faux négatifs élevé. À l'inverse, les approches d'intelligence artificielle qui analysent systématiquement chaque requête introduisent une latence significative, dégradant l'expérience utilisateur. Les organisations sont ainsi confrontées à un arbitrage difficile entre robustesse de la protection et fluidité du service — un arbitrage que la majorité des structures africaines n'ont ni le temps ni l'expertise de résoudre elles-mêmes.
+Un déficit critique de compétences en cybersécurité
+Le problème n'est pas seulement technique : il est organisationnel. La grande majorité des PME, écoles, collectivités et administrations maliennes ne disposent d'aucun expert en cybersécurité en interne. Les solutions existantes, qu'elles soient commerciales ou open source, exigent une expertise de configuration et d'interprétation des alertes que ces organisations n'ont pas. Le résultat est un cercle vicieux : les outils de protection disponibles ne sont ni déployés, ni correctement configurés, ni exploités — laissant les applications critiques exposées.
+ANALYSE DU CONTEXTE MALIEN
+Une transformation numérique accélérée, une cybersécurité en retard
+Le Mali, comme la majorité des pays de la sous-région ouest-africaine, connaît une accélération de sa transformation numérique : dématérialisation des services administratifs, expansion des services financiers numériques, digitalisation progressive des PME et des établissements scolaires et universitaires. Cette dynamique s'accompagne mécaniquement d'une multiplication des surfaces d'attaque applicatives, sans que les capacités de défense locales ne suivent le même rythme.
+Un enjeu de souveraineté numérique
+La dépendance quasi-totale des organisations maliennes envers des solutions de cybersécurité étrangères, souvent coûteuses et peu adaptées aux réalités locales (connectivité, budgets, ressources humaines), pose un problème de souveraineté numérique. Une solution conçue localement, par des ingénieurs formés au Mali, hébergeable sur des infrastructures nationales ou régionales, et adaptée aux contraintes budgétaires des organisations locales, constitue un levier stratégique d'autonomie technologique.
+Un terrain propice à l'adoption
+Institutions financières et de microfinance : cibles privilégiées des attaques applicatives, avec des obligations réglementaires croissantes en matière de sécurité des données.
+Administrations publiques : portails de services citoyens en expansion, souvent développés avec des ressources limitées et sans revue de sécurité systématique
+Écoles et universités : plateformes pédagogiques et systèmes de gestion académique exposés, avec un budget de sécurité quasi inexistant.
+PME numériques : e-commerce et services en ligne émergents, souvent bâtis sur des stacks techniques standards (PHP/MySQL) directement compatibles avec le moteur CyberShield AI.
+Le contexte malien n'est donc pas seulement un terrain de déploiement : il est le laboratoire idéal pour démontrer qu'une cybersécurité intelligente, accessible et abordable peut être conçue en Afrique, pour l'Afrique.
+VISION, MISSION ET PROPOSITION DE VALEUR
+Vision
+61595-10190Devenir la première plateforme intelligente de cybersécurité conçue en Afrique de l'Ouest, capable de protéger automatiquement les organisations qui n'ont pas les moyens de recruter des experts en cybersécurité.
+Mission
+Permettre à toute organisation — école, PME, administration, institution financière, ONG — de renforcer automatiquement son niveau de cybersécurité, sans expertise technique préalable, grâce à une plateforme qui détecte les menaces, les explique en langage clair et accompagne la remédiation.
+Proposition de valeur
+Dimension
+Ce que propose CyberShield AI
+Détection
+Moteur hybride heuristique + IA, validé à 98,8 % de F1-score sur le module SQL Injection
+Explication
+Assistant IA qui traduit chaque alerte technique en explication compréhensible par un non-expert
+Priorisation
+Score de risque contextuel pour concentrer l'attention sur les incidents critiques
+Accompagnement
+Recommandations de remédiation, pas seulement un blocage brut
+Accessibilité
+Pensé pour des organisations sans équipe de sécurité dédiée
+Souveraineté
+Conception et hébergement locaux, indépendance vis-à-vis des solutions étrangères
+DESCRIPTION DÉTAILLÉE DE CYBERSHIELD AI
+Positionnement
+CyberShield AI n'est ni un antivirus, ni un IDS classique, ni un simple scanner de vulnérabilités, ni un chatbot IA générique appliqué à la sécurité. C'est une plateforme intelligente d'assistance à la cybersécurité qui combine analyse heuristique, analyse comportementale, détection automatique par apprentissage supervisé, priorisation des risques, explication des vulnérabilités et accompagnement à la correction — le tout restitué dans un tableau de bord de supervision et des rapports automatiques.
+Le module fondateur : protection contre l'injection SQL
+Le MVP actuel de CyberShield AI est un middleware de détection et de blocage des attaques par injection SQL, entièrement conçu, développé et validé expérimentalement dans le cadre d'un projet de recherche appliquée à l'ENI-ABT. Il constitue la première brique fonctionnelle de la plateforme et la preuve de concept scientifique sur laquelle repose l'ensemble de la vision produit.
+Comment fonctionne le pipeline de confiance
+Chaque requête entrante traverse un pipeline en cascade conçu pour réduire progressivement l'incertitude sur sa dangerosité, sans jamais sacrifier la performance :
+1. Normalisation : l'entrée brute est nettoyée (décodage URL multi-niveaux, mise en minuscules) pour neutraliser les tentatives d'obfuscation superficielles.
+2. Scoring heuristique : un moteur de règles pondérées (PHP) recherche les motifs OWASP connus, les caractères de rupture syntaxique et les indices statistiques comme l'entropie de Shannon, avec une pondération contextuelle selon le type de champ (connexion, recherche, administration).
+3. Décision rapide : si le score est manifestement faible ou manifestement élevé, la décision est prise immédiatement — sans jamais solliciter l'intelligence artificielle, ce qui garantit une latence quasi instantanée pour l'écrasante majorité du trafic.
+4. Zone grise et délégation à l'IA : les requêtes ambiguës (score entre 30 et 80) sont transmises à un microservice Python exposant un classifieur par Perceptron Multicouche (MLP), qui rend une décision probabiliste avec un seuil de confiance de 0,75.
+5. Filet de sécurité : une couche SecureDataGateway impose systématiquement des requêtes préparées (PDO) côté base de données, garantissant qu'une éventuelle erreur de classification ne peut jamais se traduire par une exécution SQL malveillante.
+6. Journalisation et supervision : chaque incident est enregistré avec un identifiant unique et une empreinte cryptographique du payload, consultable depuis un tableau de bord où un assistant IA (LLM) peut expliquer, sur demande, la nature et la gravité de l'attaque bloquée.
+Cette conception en cascade — courte-circuitée dès que la décision est certaine — est ce qui permet à CyberShield AI de ne solliciter le module d'intelligence artificielle, coûteux en ressources, que pour environ 28 % du trafic, économisant ainsi plus de 70 % de la charge de calcul par rapport à une approche « tout IA ».
+ARCHITECTURE FONCTIONNELLE
+Vue d'ensemble du flux de traitement
+D'un point de vue fonctionnel, la plateforme s'articule autour de six grandes fonctions qui s'enchaînent pour chaque requête utilisateur, de l'application web jusqu'au rapport d'incident :
+Étape
+Fonction
+Résultat produit
+1
+Interception de la requête
+Capture transparente au niveau du middleware applicatif
+2
+Analyse heuristique
+Score de risque déterministe, quasi instantané
+3
+Analyse IA (si nécessaire)
+Probabilité de malveillance issue du modèle MLP
+4
+Décision hybride
+Blocage, autorisation, ou remontée pour analyse humaine
+5
+Journalisation sécurisée
+Enregistrement horodaté, hashé et traçable de l'incident
+6
+Supervision et explication
+Restitution sur tableau de bord, avec assistance IA conversationnelle
+Cas d'usage principal
+Un administrateur qui consulte le tableau de bord peut visualiser en temps réel les incidents détectés, leur score de risque, l'origine de la requête et — en un clic — obtenir une explication en langage naturel générée par l'assistant IA intégré, du type : « Cette requête a été bloquée car elle contenait une tentative de contournement d'authentification par manipulation de la clause WHERE, typique d'une attaque par injection SQL classique. » Cette fonctionnalité transforme une alerte technique cryptique en information exploitable par un décideur non technique — c'est précisément ce qui différencie CyberShield AI d'un WAF traditionnel.
+ARCHITECTURE TECHNIQUE
+Architecture micro-services hybride
+CyberShield AI repose sur une architecture micro-services qui isole délibérément la logique de détection lourde (Python / Machine Learning) du flux transactionnel léger (PHP), afin de permettre une scalabilité horizontale indépendante de chaque composant.
+Composant
+Rôle
+Technologie
+Middleware de détection
+Interception HTTP, scoring heuristique, décision rapide
+PHP 8.2, Slim Framework (PSR-15)
+Microservice d'inférence
+Classification IA des requêtes ambiguës
+Python 3.11, Flask, Scikit-learn, Joblib
+SecureDataGateway
+Exécution sécurisée des requêtes en base
+PDO, requêtes préparées
+Base de données applicative
+Persistance métier et journalisation des incidents
+MySQL 8.0
+Tableau de bord de supervision
+Visualisation, alerting, assistance à la décision
+Vues SQL précalculées, API LLM
+Assistant IA d'explication
+Traduction des incidents techniques en langage clair
+API LLM (Gemini / OpenAI)
+Modélisation mathématique de la décision
+La fonction de décision hybride distingue trois zones : une zone d'innocuité (score heuristique inférieur à un seuil bas), une zone de danger avéré (score supérieur à un seuil haut) et une « zone grise » intermédiaire où le moteur heuristique seul ne peut trancher avec certitude. Cette dernière est arbitrée par le modèle d'intelligence artificielle selon un seuil de confiance calibré expérimentalement. Ce mécanisme de court-circuit (« short-circuit evaluation ») garantit que le trafic bénin — la grande majorité des requêtes — est traité en temps constant par l'heuristique seule, réservant l'inférence neuronale, plus coûteuse, aux seuls cas requérant une analyse sémantique approfondie.
+Le classifieur d'intelligence artificielle
+Le module IA repose sur un Perceptron Multicouche (MLP) à trois couches cachées (128, 64 puis 32 neurones), avec une activation ReLU sur les couches cachées et une activation sigmoïde en sortie pour produire une probabilité binaire. L'entraînement est assuré par l'algorithme Adam avec un taux d'apprentissage de 0,001. Les caractéristiques (features) injectées au modèle intègrent notamment l'entropie de Shannon du payload — un descripteur mathématique qui s'est révélé particulièrement discriminant pour détecter les attaques obfusquées, dont l'entropie est significativement plus élevée que celle d'un texte légitime.
+Résilience et mécanisme de secours
+En cas d'indisponibilité du microservice d'inférence (timeout, erreur serveur), le middleware PHP bascule automatiquement sur un mode de sécurité stricte : toute requête présentant un score heuristique supérieur au seuil bas est bloquée par précaution (principe de « fail-safe »). Ce choix garantit qu'une panne du composant IA ne se traduit jamais par une ouverture de la surface d'attaque, mais au pire par un surcroît temporaire de prudence.
+Sécurité, conformité et gouvernance des données
+Défense en profondeur : la SecureDataGateway impose des requêtes préparées, neutralisant toute injection qui aurait échappé aux deux couches de détection en amont.
+Limitation de débit (rate limiting) : un algorithme de fenêtre glissante protège le microservice IA contre les attaques par déni de service applicatif.
+Rétention des données : une politique de purge automatisée des journaux au-delà de 90 jours, alignée sur les principes de minimisation des données personnelles inspirés du RGPD.
+FONCTIONNALITÉS ACTUELLES ET ÉVOLUTIONS PRÉVUES
+Fonctionnalités déjà réalisées et validées (MVP)
+Les éléments suivants sont aujourd'hui implémentés, testés et documentés scientifiquement — ils ne relèvent pas d'une projection mais d'un travail effectivement réalisé :
+Détection des injections SQL par moteur heuristique déterministe (règles OWASP, analyse statistique, pondération contextuelle).
+Classification IA des cas ambigus par un modèle MLP entraîné et validé (F1-score de 0,988).
+Mécanisme de décision hybride avec court-circuit d'évaluation pour l'optimisation des ressources.
+Couche SecureDataGateway garantissant l'exécution sécurisée des requêtes en base de données.
+Journalisation structurée des incidents avec identifiant unique et empreinte cryptographique du payload.
+Tableau de bord de supervision avec assistant IA d'explication des incidents en langage naturel.
+Mécanisme de secours (fail-safe) en cas d'indisponibilité du module IA.
+Validation expérimentale complète : jeu de test de 10 000 requêtes, campagnes d'intrusion SQLmap et Burp Suite, tests de charge Apache Benchmark.
+Évolutions prévues (feuille de route produit)
+Les éléments suivants constituent la vision d'évolution du produit. Ils ne sont pas encore développés mais s'appuient directement sur une architecture déjà conçue pour les accueillir — notamment la généralisation du vecteur de caractéristiques à d'autres classes de vulnérabilités, déjà identifiée comme perspective scientifique dans les travaux de recherche fondateurs :
+Extension multi-vecteurs OWASP : détection du Cross-Site Scripting (XSS), des attaques CSRF, de l'inclusion de fichiers locaux (LFI) et des mauvaises configurations serveur, en généralisant le pipeline de caractéristiques déjà validé pour l'injection SQL.
+Détection des mots de passe faibles et des mauvaises pratiques d'authentification : module d'audit complémentaire au moteur de détection en temps réel.
+Analyse réseau : extension du périmètre de supervision au-delà de la couche applicative.
+Optimisation de l'inférence : migration vers des formats de modèle optimisés (ONNX) pour réduire la latence d'inférence sous la barre des 10 ms.
+Apprentissage continu (online learning) : transformation du tableau de bord en interface de labellisation, permettant au modèle de s'adapter aux nouvelles techniques d'attaque sans réentraînement manuel lourd.
+Module de conformité : génération automatique de rapports d'audit alignés sur les référentiels de sécurité applicables aux institutions financières et administrations.
+TECHNOLOGIES UTILISÉES
+Le choix technologique privilégie des briques matures, largement documentées et peu coûteuses à opérer — un critère déterminant pour garantir la reproductibilité du déploiement dans des environnements aux ressources limitées.
+Couche
+Technologies
+Justification
+Backend applicatif
+PHP 8.2, Slim Framework
+Légèreté, gestion native des middlewares (PSR-15), écosystème dominant dans les stacks web africaines existantes
+Intelligence artificielle
+Python 3.11, Scikit-learn, Joblib
+Standard académique et industriel pour le Machine Learning, large communauté, sérialisation simple des modèles
+Microservice d'inférence
+Flask
+Serveur d'inférence léger, exposition simple via API REST
+Traitement des données
+Pandas, NumPy
+Calcul vectoriel performant pour l'extraction de caractéristiques
+Base de données
+MySQL 8.0
+Robustesse, disponibilité de compétences locales, coût de licence nul
+Assistant IA
+API LLM (Gemini / OpenAI)
+Explication en langage naturel des incidents, sans nécessiter d'entraînement dédié
+Sécurité des données
+PDO (requêtes préparées)
+Défense en profondeur standardisée, indépendante du SGBD
+INNOVATION ET DIFFÉRENCIATION
+Ce qui rend CyberShield AI innovant
+Une architecture asymétrique unique : contrairement aux approches « tout IA » qui analysent systématiquement chaque requête, la délégation conditionnelle de CyberShield AI n'appelle le modèle d'intelligence artificielle que pour les cas réellement ambigus — un choix architectural qui concilie robustesse de détection et performance opérationnelle.
+L'explicabilité comme fonctionnalité centrale, pas comme option : l'assistant IA intégré transforme chaque alerte en explication compréhensible, rendant le produit exploitable par des organisations sans expert en sécurité — c'est le cœur de la proposition de valeur, pas un ajout marketing.
+Une conception pensée pour la sobriété des ressources : l'économie de plus de 70 % de charge de calcul par rapport à une approche IA systématique rend la solution viable sur des infrastructures modestes, typiques du contexte ouest-africain.
+Tableau de différenciation
+Critère
+WAF traditionnel
+Solution IA « pure »
+CyberShield AI
+Détection zero-day
+Faible
+Élevée
+Élevée
+Latence
+Très faible
+Élevée
+Faible (ciblée)
+Faux positifs
+Élevés
+Modérés
+Très faibles
+Charge de calcul
+Faible
+Très élevée
+Optimisée
+Explicabilité pour nonexperts
+Absente
+Rare
+Fonctionnalité centrale
+Adapté aux budgets limités
+Variable
+Rarement
+Oui, par conception
+Ces comparaisons qualitatives (zero-day, latence, faux positifs, charge de calcul) reflètent les résultats mesurés sur le module de détection d'injection SQL et l'analyse comparative documentée dans les travaux scientifiques fondateurs du projet ; leur généralisation aux futurs modules multi-vecteurs constitue un objectif de la feuille de route, non un résultat déjà acquis pour ces classes de menaces.
+FAISABILITÉ
+Faisabilité technique — déjà démontrée
+La faisabilité technique du cœur de CyberShield AI n'est pas une hypothèse : elle est démontrée par une implémentation fonctionnelle et des résultats expérimentaux mesurés sur un environnement simulant des conditions de production réelles.
+Indicateur
+Résultat mesuré
+Interprétation
+Score F1 du module IA
+0,988
+Excellent équilibre précision / rappel
+Taux de faux positifs
+0,5 %
+Impact minimal sur les utilisateurs légitimes
+Taux de faux négatifs
+0,1 %
+Très haut niveau de sécurité effective
+Latence médiane (heuristique seul)
+13 ms
+Imperceptible pour l'utilisateur final
+Latence avec recours à l'IA
+45 ms
+Sous le seuil critique de perception (100 ms)
+Requêtes traitées sous 100 ms
+98 %
+Viabilité opérationnelle confirmée
+Part du trafic transmise à l'IA
+28 %
+Économie de charge de calcul de plus de 70 %
+Jeu de données de validation
+10 000 requêtes (5 000 saines / 5 000 malveillantes)
+Protocole de test rigoureux, boîte noire et boîte blanche
+Faisabilité opérationnelle
+Le stack technologique retenu (PHP, MySQL, Python) correspond à l'écosystème dominant des applications web existantes en Afrique de l'Ouest, ce qui minimise l'effort d'intégration pour les organisations cibles. L'architecture micro-services permet un déploiement progressif : le middleware de détection peut être intégré à une application existante sans réécriture complète.
+Limites identifiées et axes de fiabilisation
+Une analyse rigoureuse de la faisabilité impose de mentionner honnêtement les limites actuelles, déjà identifiées lors de la phase de validation expérimentale : le microservice d'inférence, dans sa configuration de développement actuelle, peut présenter une dégradation de performance sous une charge de requêtes complexes et simultanées très élevée. Le passage à une configuration de production (scaling horizontal, framework d'inférence optimisé) fait partie des priorités techniques de la phase de post-concours.
+IMPACT ÉCONOMIQUE, SOCIAL ET SOUVERAINETÉ NUMÉRIQUE
+Impact économique
+Réduction du coût de la cybersécurité pour les PME : une solution accessible évite aux petites structures de subir le coût d'une violation de données (interruption de service, perte de confiance, sanctions réglementaires) sans avoir à financer une équipe de sécurité dédiée.
+Création de valeur locale : le développement, l'hébergement et la maintenance d'une solution conçue au Mali génèrent des compétences et des emplois qualifiés localement, plutôt que des flux financiers vers des fournisseurs étrangers.
+Effet de confiance pour l'écosystème numérique : une meilleure protection des plateformes locales renforce la confiance des usagers dans les services numériques maliens, condition nécessaire à leur adoption durable.
+Impact social
+Protection des données personnelles des citoyens : les administrations et institutions financières traitent des données sensibles ; une protection renforcée réduit le risque d'exposition de ces données.
+Démocratisation de la cybersécurité : en rendant la détection et l'explication des menaces accessibles à des non-experts, CyberShield AI réduit la barrière à l'entrée pour les petites organisations et les écoles.
+Formation et transfert de compétences : le projet, né dans un cadre académique, s'inscrit dans une dynamique de valorisation des compétences en cybersécurité et en IA formées au Mali.
+Impact sur la souveraineté numérique
+Le développement d'une capacité nationale de détection et de réponse aux cybermenaces réduit la dépendance structurelle du Mali envers des solutions de sécurité étrangères, souvent inadaptées aux contraintes locales et soumises à des régimes d'exportation ou de licence hors du contrôle national. Une plateforme conçue, hébergeable et maintenable localement constitue un actif stratégique pour la résilience numérique du pays, en particulier pour la protection des infrastructures numériques critiques (services financiers, administration électronique).
+BUSINESS MODEL
+Le modèle économique envisagé vise à concilier accessibilité pour les petites structures et viabilité financière du projet, à travers une approche freemium adossée à des offres différenciées selon la taille et la criticité de l'organisation cliente.
+Segment
+Offre
+Modèle de revenu
+Écoles, associations, très petites structures
+Module de détection SQL Injection, tableau de bord basique
+Gratuit ou tarif symbolique — logique d'adoption et d'impact social
+PME et startups numériques
+Plateforme complète, support standard, alertes en temps réel
+Abonnement mensuel (SaaS) selon le volume de trafic protégé
+Institutions financières et administrations
+Déploiement dédié, conformité renforcée, rapports d'audit, SLA
+Contrat annuel avec accompagnement technique
+Intégrateurs et agences web
+Licence d'intégration en marque blanche
+Redevance par déploiement client
+Cette structuration par paliers permet de démocratiser l'accès à la protection de base tout en construisant une source de revenus récurrente sur les segments à plus forte valeur ajoutée (institutions financières, administrations), où les exigences de conformité justifient un accompagnement renforcé.
+FEUILLE DE ROUTE
+Horizon
+Jalon
+Livrables
+Déjà réalisé
+Preuve de concept scientifique
+Moteur hybride SQL Injection, validation expérimentale, tableau de bord avec assistant IA
+0 – 3 mois (postconcours)
+Industrialisation du MVP
+Passage en configuration de production, tests de charge renforcés, packaging pour intégration facile
+3 – 6 mois
+Premiers déploiements pilotes
+Partenariats avec 2 à 3 organisations pilotes (école, PME, institution financière)
+6 – 12 mois
+Extension multi-vecteurs
+Ajout des modules XSS et audit des mots de passe faibles, généralisation du pipeline de détection
+12 – 24 mois
+Passage à l'échelle régionale
+Déploiement commercial, partenariats avec intégrateurs, certification et conformité renforcées
+ANALYSE DES RISQUES
+Risque
+Nature
+Mesure de mitigation
+Dégradation de performance sous charge extrême
+Technique
+Migration vers une configuration de production, scaling horizontal du microservice d'inférence
+Faux positifs affectant l'expérience utilisateur
+Produit
+Ajustement continu des seuils, boucle de retour via l'apprentissage actif prévu en feuille de route
+Résistance au changement des organisations cibles
+Adoption
+Offre d'entrée gratuite/accessible, accompagnement pédagogique, démonstrations concrètes
+Dépendance à une API LLM tierce pour l'assistant
+d'explication
+Technique / souveraineté
+Étude d'alternatives locales ou open source à moyen terme pour réduire la dépendance externe
+Concurrence de solutions internationales établies
+Marché
+Positionnement différencié sur l'explicabilité, l'accessibilité et l'adaptation au contexte local
+Financement du passage du prototype au produit
+Financier
+Recherche de partenariats avec le concours, incubateurs et institutions publiques (BCEAO, ministères)
+CONCLUSION
+CyberShield AI part d'un constat simple mais souvent négligé : la majorité des organisations africaines qui ont le plus besoin de protection contre les cyberattaques sont précisément celles qui ont le moins les moyens de se l'offrir. En s'appuyant sur une architecture hybride déjà conçue, développée et validée scientifiquement — avec des résultats mesurés et non projetés — le projet démontre qu'il est possible de concevoir, en Afrique, une cybersécurité à la fois rigoureuse, performante et accessible.
+Le module de protection contre l'injection SQL constitue la première pierre d'un édifice plus vaste : une plateforme intelligente capable, à terme, de couvrir l'ensemble des vulnérabilités majeures des applications web, tout en restant utilisable par des organisations sans expertise en cybersécurité. C'est cette double promesse — rigueur scientifique et accessibilité opérationnelle — que ce dossier de candidature soumet à l'appréciation du jury du Concours Innovation des Journées Nationales de la Cybersécurité.
+En synthèse
+Un socle technique validé. Une vision produit claire. Un impact direct sur la souveraineté numérique du Mali.
+CyberShield AI est prêt à passer du laboratoire de recherche au terrain.

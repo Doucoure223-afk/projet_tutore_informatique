@@ -79,23 +79,32 @@ try {
     Copy-ClientDirectory 'docker'
 
     $files = @(
-        '.dockerignore', '.env.example', '.htaccess', 'compose.yaml', 'compose.siem.yaml', 'index.php',
+        '.dockerignore', '.env.example', '.htaccess', 'compose.yaml', 'compose.siem.yaml', 'compose.https.yaml', 'index.php',
         'config/.htaccess', 'config/ai.php', 'config/logger.php', 'config/security.php',
-        'database/.htaccess', 'database/schema.sql', 'database/seed_products.sql',
-        'logs/.htaccess', 'logs/.gitkeep', 'secrets/.htaccess', 'scripts/.htaccess',
-        'scripts/init-docker.ps1', 'scripts/siem_forwarder.py',
+        'database/.htaccess', 'database/schema.sql', 'database/seed_products.sql', 'database/orders.sql',
+        'logs/.htaccess', 'logs/.gitkeep', 'scripts/.htaccess',
+        'scripts/init-docker.ps1', 'scripts/siem_forwarder.py', 'scripts/backup_restore.py',
+        'scripts/verify-client-deployment.ps1',
         'security/access.php', 'security/bootstrap.php', 'security/dashboard.php', 'security/detector.php',
         'security/explanations.php', 'security/hybrid_analyzer.php', 'security/ia_analyzer.php',
         'security/ip-rules.php', 'security/ip_access.php', 'security/lab.php', 'security/logger.php',
         'security/assistant.php', 'security/assistant-client.php', 'security/assistant-chat.php',
-        'security/assistant-widget.js', 'security/middleware.php', 'security/response_handler.php',
+        'security/assistant-widget.js', 'security/assistant-page.js', 'security/assistant-request.js',
+        'security/client_identity.php', 'security/tls-request.php',
+        'security/middleware.php', 'security/response_handler.php',
+        'security/rule_catalog.php', 'security/triage.php',
         'security/console.css',
+        'config/security-rules.json',
         'ia/assistant-requirements.txt', 'ia/assistant_core.py', 'ia/assistant_graph.py',
         'ia/assistant_service.py', 'ia/features.py', 'ia/requirements.txt', 'ia/service.py', 'ia/train.py',
         'tests/fixtures/HttpParamsDataset/payload_train.csv',
-        'docs/DEPLOIEMENT_CLIENTS_ET_INTEGRATION_PHP.md'
+        'docs/DEPLOIEMENT_CLIENTS_ET_INTEGRATION_PHP.md', 'docs/EXPLOITATION.md'
     )
     foreach ($file in $files) { Copy-ClientFile $file }
+    $clientSecretProtection = Join-Path $stagingPath 'secrets/.htaccess'
+    New-Item -ItemType Directory -Force -Path (Split-Path -Parent $clientSecretProtection) | Out-Null
+    # Secret files must never be served by Apache, even if the source ACL blocks reads.
+    [System.IO.File]::WriteAllText($clientSecretProtection, 'Require all denied' + [Environment]::NewLine, [System.Text.UTF8Encoding]::new($false))
 
     # Start with public defaults only. The client host creates its own secrets later.
     $environment = Get-Content -LiteralPath (Join-Path $stagingPath '.env.example') -Raw
@@ -120,6 +129,21 @@ try {
         $newLine + "COMPOSE_PROJECT_NAME=$composeProject" + $newLine
     [System.IO.File]::WriteAllText((Join-Path $stagingPath '.env'), $environment, [System.Text.UTF8Encoding]::new($false))
 
+    # Public build assets only: neither mutable .env nor runtime/secret values are hashed.
+    $manifestFiles = @(Get-ChildItem -LiteralPath $stagingPath -Recurse -File -Force |
+        Where-Object { $_.FullName -ne (Join-Path $stagingPath '.env') } |
+        ForEach-Object {
+            [ordered]@{
+                path = $_.FullName.Substring($stagingPath.Length + 1).Replace('\', '/')
+                sha256 = (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+                size = $_.Length
+            }
+        } | Sort-Object path)
+    $manifest = [ordered]@{ schema_version = 1; client_id = $ClientId; files = $manifestFiles }
+    [System.IO.File]::WriteAllText((Join-Path $stagingPath 'package-manifest.json'),
+        ($manifest | ConvertTo-Json -Depth 6), [System.Text.UTF8Encoding]::new($false))
+    & (Join-Path $stagingPath 'scripts/verify-client-deployment.ps1') -PackageRoot $stagingPath
+
     $safeDestination = $destinationFull.Replace("'", "''")
     $readmeLines = @(
         '# Déploiement CyberShield — client ' + $ClientId,
@@ -132,6 +156,7 @@ try {
         '',
         ("    Set-Location '{0}'" -f $safeDestination),
         '    powershell -ExecutionPolicy Bypass -File .\scripts\init-docker.ps1',
+        '    powershell -ExecutionPolicy Bypass -File .\scripts\verify-client-deployment.ps1',
         ("    docker compose --project-name {0} up --build -d" -f $composeProject),
         '',
         'Le script d''initialisation doit être exécuté sur la machine du client. Il crée ses clés aléatoires dans secrets/ sans les afficher. Ne transmettez pas ces fichiers par courriel et ne partagez pas ce dossier avec une autre installation.',
@@ -142,7 +167,7 @@ try {
         '',
         '## Assistant local (facultatif)',
         '',
-        'Installer Ollama sur l''hôte et télécharger le modèle autorisé : ollama pull qwen2.5:7b-instruct. Puis démarrer le profil :',
+        'Installer Ollama sur l''hôte et télécharger le modèle configuré dans .env (par défaut : ollama pull llama3.2:latest). Puis démarrer le profil :',
         '',
         ("    docker compose --project-name {0} --profile assistant up --build -d" -f $composeProject),
         '',
@@ -171,6 +196,6 @@ try {
     Write-Output "Projet Compose : $composeProject | Port local : $Port | Mode : monitor"
     Write-Output "Étape suivante sur la machine du client : exécuter scripts/init-docker.ps1 puis docker compose --project-name cybershield-$ClientId up --build -d."
 } catch {
-    Write-Error "Création interrompue. Le dossier temporaire peut être inspecté puis supprimé manuellement : $stagingPath"
-    throw
+    $cause = $_.Exception.Message
+    throw "Création interrompue : $cause. Le dossier temporaire peut être inspecté puis supprimé manuellement : $stagingPath"
 }

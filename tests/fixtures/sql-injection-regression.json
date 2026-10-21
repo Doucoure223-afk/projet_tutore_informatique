@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "positive": [
+    {"name":"union select","input":"1 UNION SELECT name FROM users","pattern":"UNION_SELECT","would_block":true},
+    {"name":"numeric boolean","input":"1 OR 2=2","pattern":"NUMERIC_BOOLEAN","would_block":true},
+    {"name":"quoted boolean","input":"x OR 'a'='a'","pattern":"QUOTED_BOOLEAN","would_block":true},
+    {"name":"boolean predicate","input":"x OR EXISTS(SELECT 1)","pattern":"BOOLEAN_PREDICATE","would_block":true},
+    {"name":"boolean literal","input":"1 AND TRUE","pattern":"BOOLEAN_LITERAL","would_block":true},
+    {"name":"stacked statement","input":"1; DROP TABLE users","pattern":"STACKED_STATEMENT","would_block":true},
+    {"name":"time based","input":"SLEEP(2)","pattern":"TIME_BASED","would_block":true},
+    {"name":"error based","input":"UPDATEXML(1,2,3)","pattern":"ERROR_BASED","would_block":true},
+    {"name":"file access","input":"LOAD_FILE('/etc/passwd')","pattern":"FILE_ACCESS","would_block":true},
+    {"name":"quote comment","input":"admin' --","pattern":"QUOTE_COMMENT","would_block":false},
+    {"name":"system catalog","input":"information_schema.tables","pattern":"SYSTEM_CATALOG","would_block":false},
+    {"name":"select statement","input":"SELECT id FROM users","pattern":"SELECT_STATEMENT","would_block":false},
+    {"name":"write statement","input":"UPDATE users SET name='x'","pattern":"WRITE_STATEMENT","would_block":false},
+    {"name":"encoded SQL function","input":"CHAR(65,66)","pattern":"ENCODED_SQL_FUNCTION","would_block":false}
+  ],
+  "benign": ["Bonjour Bamako", "Orlando Anderson", "O'Connor", "A union of ideas", "12345"]
+}

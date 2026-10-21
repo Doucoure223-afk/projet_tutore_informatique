@@ -1,0 +1,18 @@
+# Optional TLS smoke test; bind remains loopback. Supply a certificate before use.
+# Never combine with compose.phone-demo.yaml: the phone relay is intentionally HTTP.
+services:
+  web:
+    command: ["apache2-foreground", "-D", "CYBERSHIELD_TLS"]
+    environment:
+      CYBERSHIELD_REQUIRE_HTTPS: "1"
+      CYBERSHIELD_HTTPS_PROXY_PEERS: ""
+    ports:
+      - "127.0.0.1:${HTTPS_PORT:-8443}:443"
+    secrets:
+      - tls_certificate
+      - tls_private_key
+secrets:
+  tls_certificate:
+    file: ./docker-secrets/tls/server.crt
+  tls_private_key:
+    file: ./docker-secrets/tls/server.key

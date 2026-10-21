@@ -1,0 +1,14 @@
+# Optional local Wi-Fi demonstration. The Docker port stays on loopback;
+# scripts/lan-proxy.py forwards the phone's real IP with an authenticated header.
+services:
+  web:
+    environment:
+      CYBERSHIELD_MODE: block
+      CYBERSHIELD_LAN_PROXY_ENABLED: "true"
+      CYBERSHIELD_LAN_PROXY_PEERS: "127.0.0.1,::1,docker-gateway"
+      CYBERSHIELD_LAN_PROXY_SECRET_FILE: /run/secrets/lan_proxy_key
+    secrets:
+      - lan_proxy_key
+secrets:
+  lan_proxy_key:
+    file: ./docker-secrets/lan_proxy_key.txt

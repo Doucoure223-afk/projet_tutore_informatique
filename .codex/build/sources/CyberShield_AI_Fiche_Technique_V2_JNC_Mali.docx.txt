@@ -1,0 +1,105 @@
+CYBERSHIELD AI
+FICHE TECHNIQUE
+Plateforme intelligente d’assistance et de protection à la cybersécurité
+Concours
+Concours Innovation : Journées Nationales de la Cybersécurité (JNC), Mali
+Nom commercial
+CyberShield AI
+Positionnement scientifique
+Architecture hybride intelligente de protection des applications web contre les cyberattaques
+Produit
+Plateforme intelligente d’assistance à la cybersécurité
+Porteur
+Sekou Doucoure
+Équipe
+Sekou Doucoure  & Hawa Thiama
+Établissement
+École Nationale d’Ingénieurs Abderhamane Baba Touré (ENI-ABT), Bamako
+Domaine
+Cybersécurité • Intelligence artificielle • Sécurité des applications web
+Stade
+MVP fonctionnel / preuve de concept validée
+Détecter. Comprendre. Prioriser. Accompagner. Protéger.
+Résumé exécutif
+CyberShield AI est une plateforme intelligente de cybersécurité destinée aux écoles, PME, administrations, collectivités et organisations manipulant des données sensibles. Son MVP constitue une première brique concrète : la détection et le blocage automatique des injections SQL dans les applications web. La solution combine un moteur heuristique rapide et un modèle d’intelligence artificielle afin de traiter efficacement les requêtes normales, malveillantes et ambiguës. Au-delà du blocage, CyberShield AI journalise les incidents, les supervise dans un tableau de bord et les explique en langage compréhensible. La vision est d’étendre progressivement ce socle vers une plateforme multi-vulnérabilités, accessible et déployable localement au Mali et, à terme, dans d’autres environnements africains.
+Problème et besoin
+Les organisations dépendent de plus en plus des applications web tout en ne disposant pas toujours d’expertise spécialisée en cybersécurité. Les vulnérabilités applicatives peuvent exposer des données sensibles et perturber des services essentiels. Les outils existants peuvent être difficiles à exploiter, coûteux ou limités à la simple détection. Le besoin identifié est donc double : renforcer la protection technique et rendre les risques compréhensibles et actionnables par des utilisateurs qui ne sont pas nécessairement des experts.
+Proposition de valeur
+Détection : identifier automatiquement les comportements et requêtes suspects.
+Protection : bloquer les attaques détectées avant leur impact sur l’application.
+Explication : traduire les alertes techniques en informations compréhensibles.
+Priorisation : fournir un niveau de risque pour orienter les actions.
+Accompagnement : guider progressivement l’administrateur vers la correction.
+Accessibilité et souveraineté : viser une solution légère, adaptable et déployable localement.
+Ce qui existe réellement dans le MVP
+Protection spécialisée contre les injections SQL.
+Moteur heuristique PHP basé sur des motifs OWASP et des indices statistiques.
+Zone grise : délégation des cas ambigus au micro service IA.
+Modèle MLP pour la classification des requêtes.
+Middleware d’interception et mécanisme de décision hybride.
+SecureDataGateway et utilisation de requêtes préparées comme couche défensive supplémentaire.
+Journalisation structurée des incidents et tableau de bord de supervision.
+Assistant IA destiné à expliquer la sémantique des attaques bloquées.
+Mécanisme fail-safe et contrôle de disponibilité du service IA.
+Architecture technique
+Le pipeline du MVP suit une logique asymétrique : la requête est interceptée par la couche applicative, normalisée puis soumise au moteur heuristique. Les requêtes clairement malveillantes peuvent être bloquées immédiatement ; les cas ambigus sont transmis au service Python d’inférence. La décision finale combine les informations disponibles, puis l’événement est journalisé et présenté dans le système de supervision.
+CLIENT
+APPLICATION WEB
+CYBERSHIELD AI
+DONNÉES
+Requête HTTP
+Middleware PHP
+Heuristique → Zone grise →
+MLP
+MySQL
+Utilisateur
+Interception
+Décision : autoriser / bloquer
+Incidents / logs
+Innovation technique
+L’innovation centrale est l’architecture hybride asymétrique. Le système ne sollicite pas systématiquement l’IA : le moteur heuristique traite rapidement les cas évidents et ne délègue à l’IA que la zone d’incertitude. Cette organisation vise à obtenir un compromis entre précision, temps de réponse et consommation de ressources. L’innovation produit complète cette innovation technique par l’explication, la priorisation et l’accompagnement de l’utilisateur.
+Résultats expérimentaux du MVP
+La validation documentée porte sur un jeu de 10 000 requêtes. Les résultats rapportés sont un F1-score de 0,988, un taux de faux positifs de 0,5 %, un taux de faux négatifs de 0,1 %, avec 98 % des requêtes traitées en moins de 100 ms. Les mesures détaillées rapportent également environ 13 ms pour le traitement heuristique et 45 ms lorsque la requête passe par l’IA, avec environ 28 % du trafic orienté vers l’analyse IA. Ces chiffres décrivent le prototype évalué et ne constituent pas une promesse de performance universelle.
+F1-score
+Faux positifs
+Faux négatifs
+Trafic vers IA
+Latence IA
+0,988
+0,5 %
+0,1 %
+≈ 28 %
+≈ 45 ms
+Public cible et cas d’usage
+Établissements scolaires et universitaires : protection des plateformes et applications de gestion.
+PME et startups : sécurité accessible sans équipe SOC dédiée.
+Administrations et collectivités : protection progressive des services numériques.
+Institutions financières et structures de microfinance : réduction du risque applicatif.
+ONG et organisations manipulant des données sensibles.
+Agences web et intégrateurs : possibilité d’intégrer la protection dans les applications clientes.
+Modèle de déploiement et industrialisation
+Le produit est pensé pour évoluer vers plusieurs modes de déploiement : SaaS pour les structures recherchant une mise en service rapide, installation dédiée pour les organisations ayant des exigences particulières, et déploiement local pour les environnements sensibles ou à connectivité limitée. L’industrialisation devra renforcer la robustesse, la supervision, la sécurité, la gestion des versions du modèle et la simplicité d’intégration.
+Modèle économique envisagé
+Offre d’entrée gratuite ou à coût symbolique pour les établissements éducatifs et très petites structures.
+Abonnement SaaS pour PME et startups.
+Déploiements dédiés et contrats annuels pour administrations et institutions.
+Licences ou intégrations pour agences web et intégrateurs.
+Services complémentaires : audit, accompagnement, formation et support.
+Feuille de route
+Phase 1 — Industrialisation du MVP : robustesse, tests, performance, sécurité, packaging et déploiement simplifié.
+Phase 2 — Extension applicative : ajout progressif de XSS, CSRF, LFI, mauvaises configurations et mots dépasse faibles.
+Phase 3 — Plateforme intelligente : apprentissage continu, corrélation d’événements, recommandations avancées et analyse élargie des environnements.
+Phase 4 — Déploiement souverain : optimisation du mode local/hors ligne et adaptation aux contraintes de connectivité et d’infrastructure.
+Important : les phases 2 à 4 sont des objectifs de développement ; elles ne sont pas présentées comme des fonctionnalités déjà disponibles dans le MVP.
+Impact et souveraineté numérique
+CyberShield AI vise à démocratiser l’accès à la cybersécurité en réduisant la dépendance à des solutions complexes ou à une expertise rare. Le projet cherche à protéger les données et services numériques, à renforcer les compétences locales en IA et cybersécurité et à favoriser des capacités de déploiement et d’hébergement local. La contextualisation au Mali constitue un axe stratégique : simplicité d’usage, coûts maîtrisés et possibilité d’un fonctionnement local lorsque la connectivité est limitée.
+Différenciation
+Un MVP technique déjà construit plutôt qu’une simple idée.
+Une spécialisation initiale claire sur SQL Injection permettant une démonstration vérifiable.
+Une architecture hybride qui combine règles rapides et IA sur les cas ambigus.
+Une couche d’explication et d’accompagnement qui rapproche l’outil des besoins d’utilisateurs non-spécialistes.
+Une trajectoire claire vers une plateforme multi-vulnérabilités sans surestimer les capacités actuelles.
+Vision
+Faire évoluer CyberShield AI d’un système spécialisé de protection contre les injections SQL vers une plateforme intelligente d’assistance à la cybersécurité capable d’aider les organisations à détecter, comprendre, prioriser et corriger leurs risques numériques. La vision de long terme est de proposer une solution adaptée aux réalités maliennes et africaines, combinant intelligence artificielle, automatisation, accessibilité et souveraineté numérique.
+CyberShield AI — Détecter. Comprendre. Prioriser. Accompagner. Protéger.
+Document de synthèse technique préparé pour accompagner la candidature JNC. Les performances et fonctionnalités indiquées comme existantes se rapportent au MVP documenté ; les autres éléments sont explicitement présentés comme des évolutions.

@@ -1,4 +1,4 @@
-param([string] $Model = 'qwen2.5:7b-instruct')
+param([string] $Model = 'llama3.2:latest')
 $ErrorActionPreference = 'Stop'
 $root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $python = Join-Path $root '.runtime\python\python.exe'
@@ -6,6 +6,22 @@ if (-not (Test-Path -LiteralPath $python)) { throw 'Python local absent. Lance s
 if ($Model -notmatch '^[A-Za-z0-9._:-]{1,80}$') { throw 'Nom de modèle Ollama invalide.' }
 if (-not (Get-Command ollama -ErrorAction SilentlyContinue)) {
     throw 'Ollama non installé ou absent du PATH. Installe Ollama puis redémarre PowerShell.'
+}
+
+function Initialize-AssistantModel([string] $TokenPath) {
+    $privateToken = [System.IO.File]::ReadAllText($TokenPath).Trim()
+    try {
+        Write-Host 'Préchauffage du modèle local avant utilisation…'
+        $ready = Invoke-RestMethod -Uri 'http://127.0.0.1:5100/warmup' -Method Post `
+            -Headers @{ Authorization = ('Bearer ' + $privateToken) } -ContentType 'application/json' -Body '{}' -TimeoutSec 75
+        if ($ready.status -ne 'ready' -or $ready.loaded -ne $true) {
+            throw 'Préchauffage non confirmé.'
+        }
+    } catch {
+        throw 'Le service est actif mais le préchauffage a échoué. Vérifie Ollama et le modèle configuré avant la démonstration.'
+    } finally {
+        $privateToken = $null
+    }
 }
 
 Push-Location $root
@@ -43,9 +59,10 @@ try {
     $healthy = $false
     try {
         $health = Invoke-RestMethod -Uri 'http://127.0.0.1:5100/health' -TimeoutSec 3
-        $healthy = $health.service -eq 'CyberShield LangGraph assistant' -and $health.model_ready -and $health.model -eq $Model
+        $healthy = $health.service -eq 'CyberShield LangGraph assistant' -and $health.service_available -and $health.model -eq $Model
     } catch { }
     if ($healthy) {
+        Initialize-AssistantModel -TokenPath $tokenPath
         Write-Host "Assistant LangGraph '$Model' déjà actif sur 127.0.0.1:5100."
         return
     }
@@ -58,13 +75,16 @@ try {
         -RedirectStandardError (Join-Path $logDir 'stderr.log') -PassThru
     for ($attempt = 0; $attempt -lt 120; $attempt++) {
         Start-Sleep -Milliseconds 500
+        $serviceActive = $false
         try {
             $health = Invoke-RestMethod -Uri 'http://127.0.0.1:5100/health' -TimeoutSec 2
-            if ($health.service -eq 'CyberShield LangGraph assistant' -and $health.model_ready -and $health.model -eq $Model) {
-                Write-Host "Assistant LangGraph actif (PID $($process.Id), modèle $Model)."
-                return
-            }
+            $serviceActive = $health.service -eq 'CyberShield LangGraph assistant' -and $health.service_available -and $health.model -eq $Model
         } catch { }
+        if ($serviceActive) {
+            Initialize-AssistantModel -TokenPath $tokenPath
+            Write-Host "Assistant LangGraph actif (PID $($process.Id), modèle $Model)."
+            return
+        }
         if ($process.HasExited) { break }
     }
     throw "L assistant n a pas demarre. Consulte les journaux dans $logDir"

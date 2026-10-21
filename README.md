@@ -23,24 +23,30 @@ La base, les journaux, les sessions et la file SIEM utilisent des volumes distin
 
 ### Assistant IA local avec LangGraph (facultatif)
 
-La console d'administration propose un assistant de triage séparé du filtre SQLi. Un graphe LangGraph prépare la question, transmet à Ollama une synthèse assainie puis vérifie la réponse. Le panneau « Poser une question » est accessible directement depuis la supervision, le laboratoire et les règles IP; une page complète reste aussi disponible. Il ne lit pas la base, n'ajoute automatiquement au contexte aucune IP ni payload de journal et ne peut ni modifier une règle ni exécuter de SQL. Le texte saisi est envoyé au modèle local; ne colle pas de secret ni de renseignement personnel. Il ne conserve pas l'historique des échanges; toute recommandation doit être vérifiée par l'administrateur. Le filtre PHP et le MLP continuent de décider indépendamment.
+La console d'administration propose un assistant de triage séparé du filtre SQLi. Un graphe LangGraph prépare la question, transmet à Ollama une synthèse assainie puis vérifie la réponse. Le panneau « Poser une question » est accessible directement depuis la supervision, le laboratoire et les règles IP; une page complète reste aussi disponible. Depuis une alerte, le bouton contextuel transmet uniquement l’identifiant de règle, sa description statique, sa gravité et la décision enregistrée; l’adresse IP, la route, le payload et la note d’analyse restent exclus. L’assistant ne lit pas la base et ne peut ni modifier une règle ni exécuter de SQL. Le texte saisi est envoyé au modèle local; ne colle pas de secret ni de renseignement personnel. Il ne conserve pas l'historique des échanges; toute recommandation doit être vérifiée par l'administrateur. Le filtre PHP et le MLP continuent de décider indépendamment.
 
-Avec Wamp, installer Ollama et télécharger le modèle avant de lancer l'assistant :
+Le catalogue versionné `config/security-rules.json` donne des identifiants stables, des niveaux de gravité et des conseils de correction aux signatures et contrôles opérationnels. Chaque constat révisable reçoit une empreinte stable calculée sans IP, payload ou identifiant de requête. Les annotations « à examiner », « confirmée » et « faux positif » sont conservées à part dans `triage.jsonl`; elles ne réécrivent jamais la décision d’origine et ne changent pas le filtrage.
+
+Avec Wamp, installer Ollama et télécharger le modèle local léger avant de lancer l'assistant :
 
 ```powershell
-ollama pull qwen2.5:7b-instruct
+ollama pull llama3.2:latest
 powershell -ExecutionPolicy Bypass -File .\scripts\start-assistant.ps1
 ```
 
-Une fois connecté à la console administrateur, cliquer sur « Poser une question » dans la supervision, le laboratoire ou la page des règles IP. La page complète est à `http://localhost/projet_tutor%C3%A9_inf/security/assistant.php`. Le modèle plus léger `qwen2.5:1.5b` est aussi accepté : le télécharger puis lancer `powershell -ExecutionPolicy Bypass -File .\scripts\start-assistant.ps1 -Model qwen2.5:1.5b`.
+Une fois connecté à la console administrateur, cliquer sur « Poser une question » dans la supervision, le laboratoire ou la page des règles IP. La page complète est à `http://localhost/projet_tutor%C3%A9_inf/security/assistant.php`. Qwen 7B reste sélectionnable pour privilégier la qualité au prix d'une latence plus élevée.
 
 Avec Docker, le modèle se télécharge sur l'hôte; `scripts/init-docker.ps1` configure son cache local dans `.env`. Le service Ollama du conteneur monte ce cache en lecture seule et n'a pas d'accès Internet :
 
 ```powershell
-ollama pull qwen2.5:7b-instruct
+ollama pull llama3.2:latest
 powershell -ExecutionPolicy Bypass -File .\scripts\init-docker.ps1
 docker compose --profile assistant up --build -d
 ```
+
+Le profil utilise Llama 3.2 par défaut pour limiter le temps de réponse sur CPU. Pour privilégier la qualité, télécharger `qwen2.5:7b-instruct`, définir `CYBERSHIELD_ASSISTANT_MODEL=qwen2.5:7b-instruct` dans `.env`, puis recréer le service assistant.
+
+Avant une démonstration Docker, lancer `powershell -ExecutionPolicy Bypass -File .\scripts\prepare-demo.ps1`, puis ouvrir `http://127.0.0.1:8080/security/assistant.php` et actualiser avec `Ctrl+F5`. Ce script vérifie les services actifs, préchauffe le modèle avec un budget distinct de 60 secondes et contrôle une réponse locale en moins d’une seconde; il ne reconstruit aucun conteneur et ne modifie ni secrets ni base. « Salut », « Fais le bilan de la supervision » et les questions de mode prises en charge produisent des réponses locales identifiées comme telles. Les autres questions utilisent le LLM avec un délai serveur de 10 secondes; leur génération n’est pas instantanée sur CPU. Ajouter `-ProbeLlm` au script pour mesurer une question libre, dont un dépassement de délai est signalé comme un échec plutôt qu’un succès.
 
 Le profil assistant est facultatif et son modèle doit déjà être présent dans le cache hôte. La construction nécessite le téléchargement des images et dépendances épinglées; l'exécution du LLM est locale. Aucun résultat de qualité, latence ou usage réel du LLM n'est revendiqué. Voir [l'architecture, les limites et les tests](ia/ASSISTANT_LANGGRAPH.md). Références : [LangGraph Graph API](https://docs.langchain.com/oss/python/langgraph/graph-api) et [API Chat Ollama](https://docs.ollama.com/api/chat).
 
@@ -76,7 +82,7 @@ Avec Docker, les journaux restent dans un volume privé. Téléchargez d’abord
 5. Exécuter `powershell -ExecutionPolicy Bypass -File .\scripts\start-ai.ps1`. Ce script installe les dépendances épinglées si nécessaire, entraîne le MLP sur le partage public d’apprentissage inclus au premier lancement, puis démarre Waitress en arrière-plan uniquement sur `127.0.0.1:5000`.
 6. Ouvrir `http://localhost/projet_tutor%C3%A9_inf/`.
 
-La console propose la [supervision](security/dashboard.php), le [laboratoire SQLi](security/lab.php), la [gestion des adresses IP bloquées](security/ip-rules.php) et la [boutique pédagogique](app/search.php). Le laboratoire ne lance aucune requête SQL. La boutique simule le paiement, sans collecter de carte ni créer de commande réelle.
+La console propose la [supervision](security/dashboard.php), le [laboratoire SQLi](security/lab.php), la [gestion des adresses IP bloquées](security/ip-rules.php) et la [boutique](app/search.php). Le laboratoire ne lance aucune requête SQL. La boutique enregistre désormais les commandes en base, avec référence, articles et suivi par compte. Elles restent en attente de paiement ; la connexion externe à CinetPay n'est pas activée. Aucun règlement ni aucune livraison ne sont annoncés sans confirmation. Voir [installation des commandes et état du paiement](docs/PAYMENTS.md).
 
 Les comptes ne sont plus créés avec des mots de passe connus. La première configuration crée un administrateur unique et impose MFA avant sa première session. Sur une ancienne base qui contient les comptes de démonstration publiés par une version antérieure, la configuration locale les désactive après la création réussie du nouvel administrateur.
 
@@ -99,6 +105,9 @@ Les comptes ne sont plus créés avec des mots de passe connus. La première con
 # Garde-fou d’accès à la première configuration Docker
 & 'C:\wamp64\bin\php\php8.4.15\php.exe' -n tests\setup_access_test.php
 
+# Génère deux déploiements temporaires et vérifie l’isolation, les secrets et Compose sans démarrer de conteneur
+pwsh -NoProfile -File tests\client_deployment_test.ps1
+
 # Évaluer le modèle inchangé sur le jeu public indépendant (10 355 lignes)
 & .\.runtime\python\python.exe ia\evaluate_external.py
 
@@ -112,6 +121,8 @@ Invoke-WebRequest 'https://dataverse.harvard.edu/api/access/datafile/6319496' -O
 & .\.runtime\python\python.exe ia\train.py
 Get-Content ia\models\training_report.json
 ```
+
+Les contrôles correspondants s’exécutent automatiquement dans `.github/workflows/quality.yml` lors d’un push ou d’une pull request. La compilation des images est vérifiée en CI; le test de déploiement client ne démarre pas de conteneur.
 
 Pour arrêter le service, exécuter `powershell -ExecutionPolicy Bypass -File .\scripts\stop-ai.ps1`. L’adresse de contrôle de santé est `http://127.0.0.1:5000/health`.
 

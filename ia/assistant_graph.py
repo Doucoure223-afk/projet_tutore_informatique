@@ -6,7 +6,7 @@ from typing import Any, Callable, TypedDict
 
 from langgraph.graph import END, START, StateGraph
 
-from assistant_core import clean_answer, clean_question, context_text, sanitize_context
+from assistant_core import clean_answer, clean_question, model_context_text, sanitize_context
 
 
 class AssistantState(TypedDict, total=False):
@@ -22,7 +22,7 @@ def build_assistant_graph(model_call: Callable[[str, str], str]):
     def prepare(state: AssistantState) -> dict[str, Any]:
         question = clean_question(state.get("question"))
         context = sanitize_context(state.get("context"))
-        return {"question": question, "safe_context": context_text(context)}
+        return {"question": question, "safe_context": model_context_text(context)}
 
     def answer(state: AssistantState) -> dict[str, str]:
         return {"answer": model_call(state["question"], state["safe_context"])}

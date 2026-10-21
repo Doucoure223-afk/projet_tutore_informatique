@@ -1,11 +1,13 @@
 <?php
 /** Append-only, structured security events. No database is required. */
+require_once __DIR__ . '/rule_catalog.php';
 class SecurityLogger
 {
     private $logFile;
     private $accessFile;
     private $iaLogFile;
     private $errorLogFile;
+    private $triageFile;
     private $siemOutbox;
     private $requestId;
     private $loggedRequests = [];
@@ -20,6 +22,7 @@ class SecurityLogger
         $this->accessFile = $directory . '/access.jsonl';
         $this->iaLogFile = $directory . '/ia_analysis.jsonl';
         $this->errorLogFile = $directory . '/errors.jsonl';
+        $this->triageFile = $directory . '/triage.jsonl';
         $this->siemOutbox = $directory . '/siem-outbox';
         $this->requestId = bin2hex(random_bytes(16));
     }
@@ -46,6 +49,11 @@ class SecurityLogger
         $path = (string) ($event['path'] ?? ($_SERVER['REQUEST_URI'] ?? ''));
         // Query strings and fragments may contain passwords or tokens.
         $path = preg_split('/[?#]/', $path, 2)[0];
+        // Older events only identified the prediction selected for the final
+        // verdict. Preserve that lower-bound reading without inventing calls.
+        $legacyMlpCalls = (int) (isset($event['risk']) || strtolower((string) ($event['source'] ?? '')) === 'ai');
+        $mlpCalls = max(0, min(128, (int) ($event['mlp_calls'] ?? $legacyMlpCalls)));
+        $mlpFailures = max(0, min(128 - $mlpCalls, (int) ($event['mlp_failures'] ?? 0)));
         $entry = [
             'id' => $this->clean($event['id'] ?? $requestId, 128),
             'request_id' => $requestId,
@@ -60,6 +68,7 @@ class SecurityLogger
             'risk' => isset($event['risk']) ? max(0, min(1, (float) $event['risk'])) : null,
             'confidence' => isset($event['confidence']) ? max(0, min(1, (float) $event['confidence'])) : null,
             'action' => $action,
+            'would_block' => isset($event['would_block']) ? (bool) $event['would_block'] : in_array($action, ['BLOCKED', 'BLOCKED_BY_AI'], true),
             'source' => $this->clean($event['source'] ?? 'heuristic', 50),
             'reason' => $this->redact($event['reason'] ?? ''),
             'patterns' => $this->redact(is_array($event['patterns'] ?? null) ? $event['patterns'] : []),
@@ -68,7 +77,12 @@ class SecurityLogger
             'latency_ms' => max(0, round((float) ($event['latency_ms'] ?? 0), 2)),
             'ai_status' => $this->clean($event['ai_status'] ?? 'not_requested', 50),
             'model_version' => $this->clean($event['model_version'] ?? '', 100),
+            'mlp_calls' => $mlpCalls,
+            'mlp_attempts' => $mlpCalls + $mlpFailures,
+            'mlp_failures' => $mlpFailures,
+            'mlp_latency_ms' => max(0, round((float) ($event['mlp_latency_ms'] ?? 0), 2)),
         ];
+        $entry = CyberShieldRuleCatalog::enrich($entry);
         $this->writeJson($this->logFile, $entry);
         $siemUrl = getenv('CYBERSHIELD_SIEM_URL');
         if (is_string($siemUrl) && trim($siemUrl) !== '' &&
@@ -159,6 +173,7 @@ class SecurityLogger
         if (!$handle) {
             throw new RuntimeException('Impossible d’ouvrir le journal de sécurité.');
         }
+        @chmod($file, 0600);
         try {
             if (!flock($handle, LOCK_EX)) {
                 throw new RuntimeException('Impossible de verrouiller le journal de sécurité.');
@@ -264,6 +279,7 @@ class SecurityLogger
             if (!isset($event['action'], $event['attack_type'], $event['ip'], $event['timestamp'])) {
                 continue;
             }
+            $event = CyberShieldRuleCatalog::enrich($event);
             if (!empty($filters['action']) && $event['action'] !== $filters['action']) { continue; }
             $type = $filters['type'] ?? $filters['attack_type'] ?? '';
             if ($type !== '' && $event['attack_type'] !== $type) { continue; }
@@ -271,7 +287,7 @@ class SecurityLogger
             $day = substr($event['timestamp'], 0, 10);
             if (!empty($filters['from']) && $day < substr($filters['from'], 0, 10)) { continue; }
             if (!empty($filters['to']) && $day > substr($filters['to'], 0, 10)) { continue; }
-            if (!empty($filters['search']) && stripos(json_encode($event, JSON_UNESCAPED_UNICODE), (string) $filters['search']) === false) { continue; }
+            if (!empty($filters['search']) && stripos(json_encode($event, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), (string) $filters['search']) === false) { continue; }
             if ($skipped < $offset) {
                 $skipped++;
                 continue;
@@ -282,9 +298,79 @@ class SecurityLogger
         return $filtered;
     }
 
+    /** Exact lookup used only after local-console authorization; never accepts a fuzzy search. */
+    public function findEventByRequestId(string $requestId): ?array
+    {
+        if ($requestId === '' || strlen($requestId) > 128) { return null; }
+        foreach ($this->readEvents($this->logFile) as $event) {
+            if (isset($event['request_id']) && hash_equals((string) $event['request_id'], $requestId)) {
+                return CyberShieldRuleCatalog::enrich($event);
+            }
+        }
+        return null;
+    }
+
+    /** Latest operator annotations, separate from the append-only decision journal. */
+    public function getTriageMap(array $requestIds = []): array
+    {
+        if (!is_file($this->triageFile)) { return []; }
+        $wanted = [];
+        foreach ($requestIds as $id) {
+            if (is_string($id) && $id !== '' && strlen($id) <= 128) { $wanted[$id] = true; }
+        }
+        $handle = @fopen($this->triageFile, 'rb');
+        if (!$handle) { throw new RuntimeException('Impossible de lire les annotations de triage.'); }
+        $latest = [];
+        try {
+            if (!flock($handle, LOCK_SH)) { throw new RuntimeException('Impossible de verrouiller les annotations de triage.'); }
+            while (($line = fgets($handle)) !== false) {
+                $record = json_decode($line, true);
+                $id = is_array($record) ? ($record['request_id'] ?? null) : null;
+                if (!is_string($id) || ($wanted && !isset($wanted[$id]))) { continue; }
+                if (!in_array($record['status'] ?? '', ['needs_review', 'confirmed', 'false_positive'], true)) { continue; }
+                $latest[$id] = $record;
+            }
+            flock($handle, LOCK_UN);
+        } finally { fclose($handle); }
+        return $latest;
+    }
+
+    /** Save analyst context without changing or rewriting the detector's decision. */
+    public function updateTriage(string $requestId, string $status, string $note = '', ?int $actorId = null): array
+    {
+        if ($requestId === '' || strlen($requestId) > 128 || preg_match('/[\x00-\x1f\x7f]/', $requestId)) {
+            throw new InvalidArgumentException('Référence d’événement invalide.');
+        }
+        if (!in_array($status, ['needs_review', 'confirmed', 'false_positive'], true)) {
+            throw new InvalidArgumentException('État de triage invalide.');
+        }
+        $event = $this->findEventByRequestId($requestId);
+        if (!$event || empty($event['reviewable']) || empty($event['finding_fingerprint'])) {
+            throw new InvalidArgumentException('Cet événement ne possède pas de signal révisable.');
+        }
+        $note = $this->redact($note);
+        $note = preg_replace('/[\x00-\x1f\x7f]+/', ' ', $note);
+        if (!is_string($note)) { $note = ''; }
+        $note = function_exists('mb_substr') ? mb_substr(trim($note), 0, 500, 'UTF-8') : substr(trim($note), 0, 500);
+        if (is_file($this->triageFile) && filesize($this->triageFile) > 10 * 1024 * 1024) {
+            throw new RuntimeException('Le journal de triage a atteint sa limite; archivez-le avant de continuer.');
+        }
+        $record = [
+            'request_id' => $requestId,
+            'finding_fingerprint' => $event['finding_fingerprint'],
+            'status' => $status,
+            'updated_at' => gmdate('c'),
+            'actor_id' => $actorId !== null && $actorId > 0 ? $actorId : null,
+            'note' => $note,
+        ];
+        $this->writeJson($this->triageFile, $record);
+        @chmod($this->triageFile, 0600);
+        return $record;
+    }
+
     private function emptyStats()
     {
-        return ['total' => 0, 'attacks' => 0, 'blocked' => 0, 'allowed' => 0, 'monitored' => 0, 'ai_analyzed' => 0, 'by_type' => [], 'top_ips' => []];
+        return ['total' => 0, 'attacks' => 0, 'blocked' => 0, 'blocked_by_ai' => 0, 'blocked_by_rules' => 0, 'blocked_by_ip' => 0, 'blocked_other' => 0, 'allowed' => 0, 'monitored' => 0, 'ai_analyzed' => 0, 'ai_requests' => 0, 'ai_attempted' => 0, 'ai_failed' => 0, 'by_type' => [], 'top_ips' => []];
     }
 
     private function addStats(array &$stats, array $event)
@@ -292,9 +378,20 @@ class SecurityLogger
         $stats['total']++;
         $blocked = in_array($event['action'], ['BLOCKED', 'BLOCKED_BY_AI'], true);
         $stats['blocked'] += (int) $blocked;
+        if ($blocked) {
+            $bucket = ($event['action'] === 'BLOCKED_BY_AI' && ($event['source'] ?? '') === 'mlp') ? 'blocked_by_ai'
+                : (($event['source'] ?? '') === 'ip_policy' ? 'blocked_by_ip'
+                : (($event['source'] ?? '') === 'heuristic' && !in_array($event['attack_type'] ?? '', ['RATE_LIMIT', 'REQUEST_SIZE', 'INVALID_JSON'], true) ? 'blocked_by_rules' : 'blocked_other'));
+            $stats[$bucket]++;
+        }
         $stats['allowed'] += (int) ($event['action'] === 'ALLOWED');
         $stats['monitored'] += (int) ($event['action'] === 'MONITORED');
-        $stats['ai_analyzed'] += (int) (isset($event['risk']) || strtolower($event['source'] ?? '') === 'ai');
+        $calls = max(0, (int) ($event['mlp_calls'] ?? (int) (isset($event['risk']) || strtolower($event['source'] ?? '') === 'ai')));
+        $failures = max(0, (int) ($event['mlp_failures'] ?? 0));
+        $stats['ai_analyzed'] += $calls;
+        $stats['ai_requests'] += (int) ($calls > 0);
+        $stats['ai_attempted'] += $calls + $failures;
+        $stats['ai_failed'] += $failures;
         if ($blocked || $event['action'] === 'MONITORED' || ($event['score'] ?? 0) >= 30) {
             $stats['attacks']++;
             $type = $event['attack_type'];

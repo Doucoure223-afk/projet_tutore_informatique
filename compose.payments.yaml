@@ -1,0 +1,18 @@
+# Option de configuration uniquement : PAYMENT_ENABLED reste faux par défaut.
+# Fournir les fichiers privés sur l’hôte marchand avant d’utiliser cet overlay.
+services:
+  web:
+    environment:
+      PAYMENT_ENABLED: ${PAYMENT_ENABLED:-false}
+      APP_PUBLIC_URL: ${APP_PUBLIC_URL:-}
+      CINETPAY_SITE_ID: ${CINETPAY_SITE_ID:-}
+      CINETPAY_API_KEY_FILE: /run/secrets/cinetpay_api_key
+      CINETPAY_SECRET_KEY_FILE: /run/secrets/cinetpay_secret_key
+    secrets:
+      - cinetpay_api_key
+      - cinetpay_secret_key
+secrets:
+  cinetpay_api_key:
+    file: ${CINETPAY_API_KEY_PATH:-./secrets/cinetpay_api_key.txt}
+  cinetpay_secret_key:
+    file: ${CINETPAY_SECRET_KEY_PATH:-./secrets/cinetpay_secret_key.txt}

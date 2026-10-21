@@ -28,8 +28,13 @@ if (!is_string($csrf) || !hash_equals(console_csrf(), $csrf)) {
 }
 $page = $_POST['page'] ?? 'console';
 $page = is_string($page) ? $page : 'console';
-$result = cybershield_assistant_ask($_POST['question'] ?? null, $page);
+$eventId = $_POST['event_id'] ?? '';
+if (!is_string($eventId) || strlen($eventId) > 128 || ($eventId !== '' && preg_match('/^[a-zA-Z0-9_-]+$/D', $eventId) !== 1)) {
+    $respond(400, ['ok' => false, 'error' => 'Référence d’alerte invalide.']);
+}
+$result = cybershield_assistant_ask($_POST['question'] ?? null, $page, $eventId !== '' ? $eventId : null);
 if (empty($result['ok'])) {
     $respond((int) ($result['status'] ?? 503), ['ok' => false, 'error' => (string) ($result['error'] ?? 'Assistant indisponible.')]);
 }
-$respond(200, ['ok' => true, 'answer' => (string) $result['answer']]);
+$respond(200, ['ok' => true, 'answer' => (string) $result['answer'],
+    'source' => $result['source'], 'kind' => $result['kind'], 'elapsed_ms' => $result['elapsed_ms']]);
